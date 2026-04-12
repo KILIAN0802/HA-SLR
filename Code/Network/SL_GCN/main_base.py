@@ -130,61 +130,67 @@ class Processor():
             num_workers=self.args.num_worker,
             drop_last=False,
             worker_init_fn=init_seed)
-
     def load_model(self):
-        
+        # 1. Xác định thiết bị (CPU hoặc GPU)
         use_cuda = torch.cuda.is_available()
         if use_cuda:
-            output_device = self.args.device[0] if type(
-                self.args.device) is list else self.args.device   # 默认使用第一张卡
+            # Lấy device index từ args, mặc định là 0 nếu có lỗi
+            output_device = self.args.device[0] if isinstance(self.args.device, list) else self.args.device
             self.output_device = output_device
             self.device = torch.device('cuda:{}'.format(output_device))
         else:
+            output_device = -1  # Gán giá trị mặc định để tránh lỗi UnboundLocalError
             self.output_device = None
             self.device = torch.device('cpu')
-        Model = import_class(self.args.model)
-        shutil.copy2(inspect.getfile(Model), self.args.work_dir)  # 保存网络模型文件
-        self.model = Model(**self.args.model_args)
-        if output_device != -1: self.model = self.model.cuda(output_device)
-        if output_device != -1: self.model = self.model.cuda(output_device)
-        if output_device != -1: self.model = self.model.cuda(output_device)
-        if self.args.device != -1:
-            dev = self.args.device[0] if isinstance(self.args.device, list) else self.args.device
-            self.model = self.model.cuda(dev)
-        # print(self.model)
-        self.loss = nn.CrossEntropyLoss().to(self.device)
-        # self.loss = LabelSmoothingCrossEntropy().cuda(output_device)
 
+        # 2. Khởi tạo Model
+        Model = import_class(self.args.model)
+        shutil.copy2(inspect.getfile(Model), self.args.work_dir)  # Lưu lại file kiến trúc mạng
+        self.model = Model(**self.args.model_args)
+
+        # 3. Đưa model lên GPU nếu khả dụng
+        if output_device != -1:
+            self.model = self.model.to(self.device)
+
+        # 4. Thiết lập hàm Loss
+        self.loss = nn.CrossEntropyLoss().to(self.device)
+
+        # 5. Load trọng số (Weights)
         if self.args.weights:
             self.print_log('Load weights from {}.'.format(self.args.weights))
             if '.pkl' in self.args.weights:
-                with open(self.args.weights, 'r') as f:
+                with open(self.args.weights, 'rb') as f: # Mở file pkl nên dùng chế độ 'rb'
                     weights = pickle.load(f)
             else:
                 weights = torch.load(self.args.weights, map_location=self.device)
 
-            weights = OrderedDict(
-                [[k.split('module.')[-1],
-                  v.to(self.device)] for k, v in weights.items()])
+            # Xử lý OrderedDict và đưa lên device
+            weights = OrderedDict([
+                [k.split('module.')[-1], v.to(self.device)] 
+                for k, v in weights.items()
+            ])
 
+            # Loại bỏ các trọng số không cần thiết (ignore_weights)
             for w in self.args.ignore_weights:
                 if weights.pop(w, None) is not None:
-                    self.print_log('Sucessfully Remove Weights: {}.'.format(w))
+                    self.print_log('Successfully Remove Weights: {}.'.format(w))
                 else:
                     self.print_log('Can Not Remove Weights: {}.'.format(w))
 
+            # Nạp trọng số vào model
             try:
                 self.model.load_state_dict(weights)
             except:
                 state = self.model.state_dict()
                 diff = list(set(state.keys()).difference(set(weights.keys())))
-                print('Can not find these weights:')
+                print('Can not find these weights in your checkpoint:')
                 for d in diff:
                     print('  ' + d)
                 state.update(weights)
                 self.model.load_state_dict(state)
 
-        if use_cuda and type(self.args.device) is list:
+        # 6. Hỗ trợ chạy đa GPU (DataParallel)
+        if use_cuda and isinstance(self.args.device, list):
             if len(self.args.device) > 1:
                 self.model = nn.DataParallel(
                     self.model,
