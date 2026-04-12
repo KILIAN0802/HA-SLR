@@ -144,7 +144,13 @@ class Processor():
             self.device = torch.device('cpu')
         Model = import_class(self.args.model)
         shutil.copy2(inspect.getfile(Model), self.args.work_dir)  # 保存网络模型文件
-        self.model = Model(**self.args.model_args).to(self.device)
+        self.model = Model(**self.args.model_args)
+        if output_device != -1: self.model = self.model.cuda(output_device)
+        if output_device != -1: self.model = self.model.cuda(output_device)
+        if output_device != -1: self.model = self.model.cuda(output_device)
+        if self.args.device != -1:
+            dev = self.args.device[0] if isinstance(self.args.device, list) else self.args.device
+            self.model = self.model.cuda(dev)
         # print(self.model)
         self.loss = nn.CrossEntropyLoss().to(self.device)
         # self.loss = LabelSmoothingCrossEntropy().cuda(output_device)
@@ -467,7 +473,7 @@ class Processor():
             
             # initialize the early_stopping object
             if self.args.es:
-                early_stopping = EarlyStopping(patience=self.args.es_patience, verbose=True)
+                early_stopping = EarlyStopping(patience=self.args.es_patience)
 
             for epoch in range(self.args.start_epoch, self.args.num_epoch):
                 save_model = ((epoch + 1) % self.args.save_interval == 0) or (
