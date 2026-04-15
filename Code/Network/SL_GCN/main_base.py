@@ -65,15 +65,20 @@ class Processor():
     def __init__(self, args):
 
         from datetime import datetime
-        args.work_dir = os.path.join("./work_dir", "{}/bs{}_f{}_lr{}{}{}{}{}/{:%Y-%m-%d_%H-%M-%S}".format(
-            args.Experiment_name,
-            args.batch_size, args.train_feeder_args['window_size'], 
-            str(args.train_base_lr) if args.phase.lower() == "train" else str(args.test_base_lr), 
-            "_trainlr{}".format(args.train_base_lr) if args.phase.lower() == "test" else "", 
-            "_warmup{}".format(args.warm_up_epoch), 
-            "_EarlyStop{}".format(args.es_patience) if args.es else "",
-            "_test" if args.phase.lower() == "test" else "", 
-            datetime.now()))
+        resume_ckpt = getattr(args, 'resume_checkpoint', '')
+        if args.phase.lower() == "train" and resume_ckpt:
+            # Resume mode: reuse the existing run directory from checkpoint path.
+            args.work_dir = os.path.dirname(os.path.dirname(resume_ckpt))
+        else:
+            args.work_dir = os.path.join("./work_dir", "{}/bs{}_f{}_lr{}{}{}{}{}/{:%Y-%m-%d_%H-%M-%S}".format(
+                args.Experiment_name,
+                args.batch_size, args.train_feeder_args['window_size'], 
+                str(args.train_base_lr) if args.phase.lower() == "train" else str(args.test_base_lr), 
+                "_trainlr{}".format(args.train_base_lr) if args.phase.lower() == "test" else "", 
+                "_warmup{}".format(args.warm_up_epoch), 
+                "_EarlyStop{}".format(args.es_patience) if args.es else "",
+                "_test" if args.phase.lower() == "test" else "", 
+                datetime.now()))
 
         # tensorboard
         self.model_saved_dir = os.path.join(args.work_dir, "checkpoints")
@@ -90,6 +95,7 @@ class Processor():
         self.best_acc_epoch = 0
         self.best_loss = 1e6
         self.best_loss_epoch = 0
+        self.latest_ckpt_path = ''
         
     def mk_dir(self):
         
@@ -234,6 +240,61 @@ class Processor():
                                               patience=10,
                                               threshold=1e-4, threshold_mode='rel',
                                               cooldown=0)
+
+    def _model_for_io(self):
+        return self.model.module if isinstance(self.model, nn.DataParallel) else self.model
+
+    def maybe_resume_training(self):
+        if self.args.phase.lower() != 'train':
+            return
+
+        ckpt_path = self.args.resume_checkpoint
+        if (not ckpt_path) and self.args.auto_resume:
+            auto_ckpt = os.path.join(
+                self.model_saved_dir,
+                "{}_latest.pt".format(os.path.basename(self.args.Experiment_name)))
+            if os.path.exists(auto_ckpt):
+                ckpt_path = auto_ckpt
+
+        if not ckpt_path:
+            return
+
+        if not os.path.exists(ckpt_path):
+            raise FileNotFoundError('Resume checkpoint not found: {}'.format(ckpt_path))
+
+        self.print_log('Resume training from checkpoint: {}'.format(ckpt_path))
+        ckpt = torch.load(ckpt_path, map_location=self.device)
+
+        if not isinstance(ckpt, dict) or 'model_state_dict' not in ckpt:
+            raise ValueError('Invalid resume checkpoint format: {}'.format(ckpt_path))
+
+        self._model_for_io().load_state_dict(ckpt['model_state_dict'])
+
+        if 'optimizer_state_dict' in ckpt and ckpt['optimizer_state_dict'] is not None:
+            self.optimizer.load_state_dict(ckpt['optimizer_state_dict'])
+
+        resumed_epoch = int(ckpt.get('epoch', -1)) + 1
+        self.args.start_epoch = max(int(self.args.start_epoch), resumed_epoch)
+        self.best_acc = float(ckpt.get('best_acc', self.best_acc))
+        self.best_acc_epoch = int(ckpt.get('best_acc_epoch', self.best_acc_epoch))
+        self.best_loss = float(ckpt.get('best_loss', self.best_loss))
+        self.best_loss_epoch = int(ckpt.get('best_loss_epoch', self.best_loss_epoch))
+
+        self.print_log('Continue from epoch {}.'.format(self.args.start_epoch + 1))
+
+    def save_latest_checkpoint(self, epoch, val_loss, accuracy):
+        ckpt = {
+            'epoch': int(epoch),
+            'model_state_dict': self._model_for_io().state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+            'best_acc': float(self.best_acc),
+            'best_acc_epoch': int(self.best_acc_epoch),
+            'best_loss': float(self.best_loss),
+            'best_loss_epoch': int(self.best_loss_epoch),
+            'val_loss': float(val_loss),
+            'val_acc': float(accuracy),
+        }
+        torch.save(ckpt, self.latest_ckpt_path)
 
     def adjust_learning_rate(self, epoch):
         """
@@ -464,6 +525,7 @@ class Processor():
 
             self.load_model()   # train_finetune时 会加载权重...
             self.load_optimizer()
+            self.maybe_resume_training()
             self.load_data()
             
             self.save_arg()  # 不放在init中， 避免 test phase 测试时 产生无效文件
@@ -472,6 +534,7 @@ class Processor():
 
             best_acc_ckpt = '{}_best_acc.pt'.format(self.args.model_saved_name) 
             best_loss_ckpt = '{}_best_loss.pt'.format(self.args.model_saved_name) 
+            self.latest_ckpt_path = '{}_latest.pt'.format(self.args.model_saved_name)
 
             # self.print_log('Parameters:\n{}\n'.format(str(vars(self.args))))  # see work_dir/xxx/config.yaml
             self.global_step = self.args.start_epoch * \
@@ -500,6 +563,8 @@ class Processor():
                     torch.save(weights, best_loss_ckpt)
                     print(val_loss)
 
+                self.save_latest_checkpoint(epoch, val_loss, accuracy)
+
 
                 # self.lr_scheduler.step(val_loss)
 
@@ -515,8 +580,10 @@ class Processor():
 
             best_acc_ckpt_final = "{}_best_acc_{}_{}.pt".format(self.args.model_saved_name, str(self.best_acc_epoch), str(self.best_acc)[2:6])
             best_loss_ckpt_final = "{}_best_loss_{}_{}.pt".format(self.args.model_saved_name, str(self.best_loss_epoch), str(self.best_loss)[2:6])
-            os.rename(src=best_acc_ckpt, dst=best_acc_ckpt_final)
-            os.rename(src=best_loss_ckpt, dst=best_loss_ckpt_final)
+            if os.path.exists(best_acc_ckpt):
+                os.rename(src=best_acc_ckpt, dst=best_acc_ckpt_final)
+            if os.path.exists(best_loss_ckpt):
+                os.rename(src=best_loss_ckpt, dst=best_loss_ckpt_final)
 
             self.print_log('\n')
             self.print_log('model_name: {}'.format(self.args.Experiment_name))

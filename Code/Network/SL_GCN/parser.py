@@ -124,6 +124,16 @@ def get_parser():
         default=0,
         help='start training from which epoch')
     parser.add_argument(
+        '--resume-checkpoint',
+        type=str,
+        default='',
+        help='path to latest checkpoint (.pt) to continue training')
+    parser.add_argument(
+        '--auto-resume',
+        type=str2bool,
+        default=False,
+        help='if true, auto load <Experiment_name>_latest.pt in current run checkpoints dir')
+    parser.add_argument(
         '--num-epoch',
         type=int,
         default=80,
