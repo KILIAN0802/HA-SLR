@@ -184,11 +184,22 @@ class Processor():
             else:
                 weights = torch.load(self.args.weights, map_location=self.device)
 
+            # Support both plain state_dict files and full training checkpoints.
+            if isinstance(weights, dict) and 'model_state_dict' in weights:
+                weights = weights['model_state_dict']
+
+            if not isinstance(weights, (dict, OrderedDict)):
+                raise ValueError('Unsupported weight format: {}'.format(type(weights)))
+
             # Xử lý OrderedDict và đưa lên device
-            weights = OrderedDict([
-                [k.split('module.')[-1], v.to(self.device)] 
-                for k, v in weights.items()
-            ])
+            cleaned_weights = OrderedDict()
+            for k, v in weights.items():
+                if torch.is_tensor(v):
+                    cleaned_weights[k.split('module.')[-1]] = v.to(self.device)
+            weights = cleaned_weights
+
+            if len(weights) == 0:
+                raise ValueError('No tensor weights found in checkpoint: {}'.format(self.args.weights))
 
             # Loại bỏ các trọng số không cần thiết (ignore_weights)
             for w in self.args.ignore_weights:
