@@ -161,4 +161,9 @@ def get_parser():
     parser.add_argument('--test_base_lr', type=float, default=0.1)
     parser.add_argument('--es_patience', type=int, default=50)
     parser.add_argument('--es', type=str2bool, default=False)
+    parser.add_argument('--modality', type=str, default='joint')
+    parser.add_argument('--joint_sign', type=str, default='sign_include')
+    parser.add_argument('--joint_type', type=str, default='27_cvpr')
+    parser.add_argument('--pretrain_cpt_time_tag', type=str, default='*')
+    parser.add_argument('--splits', nargs='+', default=['test'])
     return parser

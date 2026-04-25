@@ -19,6 +19,7 @@ import time
 import numpy as np
 import yaml
 import pickle
+import glob
 from collections import OrderedDict
 import torch
 import torch.nn as nn
@@ -66,6 +67,19 @@ class Processor():
 
         from datetime import datetime
         resume_ckpt = getattr(args, 'resume_checkpoint', '')
+        if args.phase.lower() == "train" and (not resume_ckpt) and getattr(args, 'auto_resume', False):
+            # Auto-discover the newest *_latest.pt from prior runs of the same experiment.
+            auto_pattern = os.path.join(
+                "./work_dir",
+                args.Experiment_name,
+                "**",
+                "checkpoints",
+                "{}_latest.pt".format(os.path.basename(args.Experiment_name)))
+            auto_candidates = glob.glob(auto_pattern, recursive=True)
+            if auto_candidates:
+                resume_ckpt = max(auto_candidates, key=os.path.getmtime)
+                args.resume_checkpoint = resume_ckpt
+
         if args.phase.lower() == "train" and resume_ckpt:
             # Resume mode: reuse the existing run directory from checkpoint path.
             args.work_dir = os.path.dirname(os.path.dirname(resume_ckpt))
@@ -295,6 +309,26 @@ class Processor():
             'val_acc': float(accuracy),
         }
         torch.save(ckpt, self.latest_ckpt_path)
+
+    def _select_test_checkpoints(self, checkpoint_paths):
+        if not checkpoint_paths:
+            return []
+
+        # Use checkpoints from the most recently updated run directory.
+        run_dirs = list(set(os.path.dirname(os.path.dirname(p)) for p in checkpoint_paths))
+        latest_run_dir = max(run_dirs, key=os.path.getmtime)
+        run_checkpoints = [p for p in checkpoint_paths if os.path.dirname(os.path.dirname(p)) == latest_run_dir]
+
+        selected = []
+        for suffix in ['_latest.pt', '_best_acc', '_best_loss']:
+            matches = [p for p in run_checkpoints if suffix in os.path.basename(p)]
+            if matches:
+                selected.append(max(matches, key=os.path.getmtime))
+
+        if not selected:
+            selected.append(max(run_checkpoints, key=os.path.getmtime))
+
+        return selected
 
     def adjust_learning_rate(self, epoch):
         """
@@ -608,12 +642,11 @@ class Processor():
 
                 self.args.check_dir = glob.glob(self.args.pt_dir)
                 if self.args.check_dir == []:
-                    print("check the Experiment_name of train_xxx and test_xxx are match")
+                    raise FileNotFoundError("No checkpoint found. Please check Experiment_name or set weights explicitly.")
+
+                self.args.check_dir = self._select_test_checkpoints(self.args.check_dir)
 
                 print("check_dir ", self.args.check_dir, len(self.args.check_dir))
-                
-                if not len(self.args.check_dir) == 2:
-                    pdb.set_trace()
         
                 self.mk_dir()
                 self.save_arg()
