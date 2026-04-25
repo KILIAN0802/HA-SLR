@@ -166,4 +166,13 @@ def get_parser():
     parser.add_argument('--joint_type', type=str, default='27_cvpr')
     parser.add_argument('--pretrain_cpt_time_tag', type=str, default='*')
     parser.add_argument('--splits', nargs='+', default=['test'])
+    parser.add_argument('--use-wandb', type=str2bool, default=False)
+    parser.add_argument('--wandb-project', type=str, default='')
+    parser.add_argument('--wandb-entity', type=str, default='')
+    parser.add_argument('--wandb-run-name', type=str, default='')
+    parser.add_argument('--wandb-group', type=str, default='')
+    parser.add_argument('--wandb-tags', nargs='+', default=[])
+    parser.add_argument('--wandb-mode', type=str, default='online', help='online, offline, or disabled')
+    parser.add_argument('--wandb-id', type=str, default='')
+    parser.add_argument('--wandb-resume', type=str, default='auto')
     return parser

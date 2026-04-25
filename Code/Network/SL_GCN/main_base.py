@@ -35,6 +35,11 @@ import torch.nn.functional as F
 import pdb
 from pytorchtools import EarlyStopping
 
+try:
+    import wandb  # type: ignore[reportMissingImports]
+except Exception:
+    wandb = None
+
 
 # class LabelSmoothingCrossEntropy(nn.Module):
 #     def __init__(self):
@@ -110,6 +115,8 @@ class Processor():
         self.best_loss = 1e6
         self.best_loss_epoch = 0
         self.latest_ckpt_path = ''
+        self.wandb_run = None
+        self._wandb_enabled = False
         
     def mk_dir(self):
         
@@ -119,6 +126,63 @@ class Processor():
         
         from torch.utils.tensorboard import SummaryWriter
         self.writer = SummaryWriter(self.sum_dir)
+
+    def setup_wandb(self):
+        if not getattr(self.args, 'use_wandb', False):
+            return
+
+        if self.wandb_run is not None:
+            return
+
+        if wandb is None:
+            self.print_log('WandB is enabled but the package is not installed. Skipping WandB init.')
+            return
+
+        api_key = os.environ.get('WANDB_API_KEY', '').strip()
+        if api_key:
+            try:
+                wandb.login(key=api_key, relogin=True)
+            except Exception as exc:
+                self.print_log('WandB login failed: {}'.format(exc))
+                return
+
+        wandb_kwargs = {
+            'project': self.args.wandb_project or self.args.Experiment_name.split('/')[0],
+            'name': self.args.wandb_run_name or os.path.basename(self.args.work_dir),
+            'group': self.args.wandb_group or self.args.Experiment_name,
+            'tags': self.args.wandb_tags or None,
+            'mode': self.args.wandb_mode,
+            'resume': self.args.wandb_resume,
+        }
+        if self.args.wandb_entity:
+            wandb_kwargs['entity'] = self.args.wandb_entity
+        if self.args.wandb_id:
+            wandb_kwargs['id'] = self.args.wandb_id
+
+        self.wandb_run = wandb.init(**wandb_kwargs)
+        self._wandb_enabled = True
+        wandb.config.update(vars(self.args), allow_val_change=True)
+        self.print_log('WandB initialized: {}'.format(self.wandb_run.name))
+
+    def log_wandb(self, data, step=None):
+        if self._wandb_enabled and self.wandb_run is not None:
+            wandb.log(data, step=step)
+
+    def log_wandb_artifact(self, file_path, artifact_name, artifact_type='model'):
+        if not (self._wandb_enabled and self.wandb_run is not None):
+            return
+        if not file_path or not os.path.exists(file_path):
+            return
+
+        artifact = wandb.Artifact(artifact_name, type=artifact_type)
+        artifact.add_file(file_path)
+        self.wandb_run.log_artifact(artifact)
+
+    def finish_wandb(self):
+        if self._wandb_enabled and self.wandb_run is not None:
+            wandb.finish()
+            self.wandb_run = None
+            self._wandb_enabled = False
 
     def load_data(self):
         Feeder = import_class(self.args.feeder)
@@ -433,6 +497,11 @@ class Processor():
         # Log
         self.writer.add_scalars('Loss', {'train': training_loss}, epoch+1)
         self.writer.add_scalars('Accuracy', {'train': training_acc}, epoch+1)
+        self.log_wandb({
+            'train/loss': float(training_loss),
+            'train/accuracy': float(training_acc),
+            'train/lr': float(self.lr),
+        }, step=epoch + 1)
         
         return weights
 
@@ -560,6 +629,10 @@ class Processor():
         validation_loss = np.mean(all_loss)
         self.writer.add_scalars('Loss', {'validation': validation_loss}, epoch+1)
         self.writer.add_scalars('Accuracy', {'validation': accuracy}, epoch+1)
+        self.log_wandb({
+            'validation/loss': float(validation_loss),
+            'validation/accuracy': float(accuracy),
+        }, step=epoch + 1)
 
         return validation_loss, accuracy
 
@@ -567,6 +640,7 @@ class Processor():
         if self.args.phase.lower() == 'train':
 
             self.mk_dir()   # 放在save_arg\load_model 前面
+            self.setup_wandb()
 
             self.load_model()   # train_finetune时 会加载权重...
             self.load_optimizer()
@@ -630,12 +704,23 @@ class Processor():
             if os.path.exists(best_loss_ckpt):
                 os.rename(src=best_loss_ckpt, dst=best_loss_ckpt_final)
 
+            self.log_wandb_artifact(self.latest_ckpt_path, '{}_latest'.format(os.path.basename(self.args.Experiment_name)), artifact_type='checkpoint')
+            self.log_wandb_artifact(best_acc_ckpt_final, '{}_best_acc'.format(os.path.basename(self.args.Experiment_name)), artifact_type='checkpoint')
+            self.log_wandb_artifact(best_loss_ckpt_final, '{}_best_loss'.format(os.path.basename(self.args.Experiment_name)), artifact_type='checkpoint')
+
             self.print_log('\n')
             self.print_log('model_name: {}'.format(self.args.Experiment_name))
             self.print_log('best accuracy: {}'.format(self.best_acc))
             self.print_log('best accuracy_epoch: {}'.format(best_acc_ckpt_final))
             self.print_log('best loss: {}'.format(self.best_loss))
             self.print_log('best loss_epoch: {}'.format(best_loss_ckpt_final))
+            self.log_wandb({
+                'best/accuracy': float(self.best_acc),
+                'best/accuracy_epoch': int(self.best_acc_epoch),
+                'best/loss': float(self.best_loss),
+                'best/loss_epoch': int(self.best_loss_epoch),
+            })
+            self.finish_wandb()
 
         elif self.args.phase.lower() == 'test':
 
@@ -678,6 +763,7 @@ class Processor():
             else:
                 
                 self.mk_dir()
+                self.setup_wandb()
                 self.save_arg()
                 
                 for i in range(len(self.args.splits)):
@@ -705,6 +791,7 @@ class Processor():
             wf = rf = None
         
         # test 阶段， 自动匹配 相应 数据和模型，不可在__init__中率先执行
+        self.setup_wandb()
         self.load_data()
         self.load_model()
         self.load_optimizer()
@@ -716,6 +803,7 @@ class Processor():
         self.print_log('label_path: {}.'.format(self.args.test_feeder_args['label_path']))
         self.print_log('Model: {}.'.format(self.args.model))
         self.eval(epoch=self.args.start_epoch, loader_name=['test'], wrong_file=wf, result_file=rf)
+        self.log_wandb({'test/split_done': split, 'test/weight_name': os.path.basename(self.args.weights)})
         self.print_log('Done.\n')
 
 
