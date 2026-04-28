@@ -14,6 +14,7 @@ from parser import get_parser
 
 #!/usr/bin/env python
 import argparse
+import importlib
 import os
 import time
 import numpy as np
@@ -839,12 +840,7 @@ class Processor():
         shutil.copy(os.path.abspath(__file__), self.args.work_dir)
 
 def import_class(name):
-    components = name.split('.')
-    
-    mod = __import__(components[0])  # import return model
-    for comp in components[1:]:
-        mod = getattr(mod, comp)
-    return mod
+    return importlib.import_module(name)
 
 if __name__ == '__main__':
 

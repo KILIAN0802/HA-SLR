@@ -9,6 +9,7 @@ import torch
 from torch.utils.data import Dataset
 import sys
 import random
+import importlib
 sys.path.extend(['../'])
 from feeders import tools
 
@@ -166,11 +167,7 @@ class Feeder(Dataset):
 
 
 def import_class(name):
-    components = name.split('.')
-    mod = __import__(components[0])
-    for comp in components[1:]:
-        mod = getattr(mod, comp)
-    return mod
+    return importlib.import_module(name)
 
 
 # def test(data_path, label_path, vid=None, graph=None, is_3d=False):
