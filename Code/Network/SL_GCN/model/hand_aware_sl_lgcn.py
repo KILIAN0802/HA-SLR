@@ -1,4 +1,5 @@
 import random
+import importlib
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -10,11 +11,7 @@ import os
 
 
 def import_class(name):
-    components = name.split('.')
-    mod = __import__(components[0])
-    for comp in components[1:]:
-        mod = getattr(mod, comp)
-    return mod
+    return importlib.import_module(name)
 
 
 # def conv_branch_init(conv):
