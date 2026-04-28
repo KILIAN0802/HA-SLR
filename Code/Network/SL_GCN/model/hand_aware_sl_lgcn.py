@@ -42,6 +42,77 @@ def bn_init(bn, scale):
     nn.init.constant_(bn.weight, scale)
     nn.init.constant_(bn.bias, 0)
 
+
+def normalize_digraph(A):
+    """Column-normalize adjacency matrix, same style as graph/tools.py."""
+    Dl = np.sum(A, 0)
+    h, w = A.shape
+    Dn = np.zeros((w, w), dtype=A.dtype)
+    for i in range(w):
+        if Dl[i] > 0:
+            Dn[i, i] = Dl[i] ** (-1)
+    AD = np.dot(A, Dn)
+    return AD
+
+
+def build_part_graph_adjacency(num_part=4):
+    """
+    Build 3-subset spatial adjacency for 4 body parts:
+    0:left_hand, 1:right_hand, 2:upper_body, 3:lower_body
+    """
+    self_link = [(i, i) for i in range(num_part)]
+    inward = [
+        (0, 2),  # left_hand <-> upper_body
+        (1, 2),  # right_hand <-> upper_body
+        (3, 2),  # lower_body <-> upper_body
+    ]
+    outward = [(j, i) for (i, j) in inward]
+
+    I = np.zeros((num_part, num_part), dtype=np.float32)
+    for i, j in self_link:
+        I[j, i] = 1
+
+    In = np.zeros((num_part, num_part), dtype=np.float32)
+    for i, j in inward:
+        In[j, i] = 1
+
+    Out = np.zeros((num_part, num_part), dtype=np.float32)
+    for i, j in outward:
+        Out[j, i] = 1
+
+    A = np.stack((normalize_digraph(I), normalize_digraph(In), normalize_digraph(Out)), axis=0)
+    return A
+
+
+def build_joint_to_part_map(num_point):
+    """
+    Build joint-to-part mapping matrix with shape (V, 4).
+    For 46-joint layout:
+    - left_hand: 0..20
+    - right_hand: 21..41
+    - upper_body: 42,43,44
+    - lower_body: 45
+    """
+    if num_point != 46:
+        raise ValueError("Hierarchical joint-to-part mapping is defined for V=46, got V={}".format(num_point))
+
+    part_count = 4
+    map_mat = np.zeros((num_point, part_count), dtype=np.float32)
+    part_groups = {
+        0: list(range(0, 21)),
+        1: list(range(21, 42)),
+        2: [42, 43, 44],
+        3: [45],
+    }
+
+    # Average pooling weights inside each part.
+    for p, joints in part_groups.items():
+        w = 1.0 / float(len(joints))
+        for j in joints:
+            map_mat[j, p] = w
+
+    return map_mat
+
 class unit_tcn(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size=9, stride=1, num_point=25, block_size=41):
         super(unit_tcn, self).__init__()
@@ -245,20 +316,32 @@ class Model(nn.Module):
         self.l9 = TCN_GCN_unit(256, 256, A, A_hands, num_point, block_size)
         self.l10 = TCN_GCN_unit(256, 256, A, A_hands, num_point, block_size)
 
-        self.fc = nn.Linear(256, num_class)
+        # Hierarchical branch: joint -> part (4 parts) -> part-level GCN.
+        self.num_part = 4
+        joint_to_part = build_joint_to_part_map(num_point)
+        self.register_buffer('joint_to_part', torch.from_numpy(joint_to_part))  # (V, 4)
+
+        A_part = build_part_graph_adjacency(self.num_part)  # (3, 4, 4)
+        self.part_l1 = TCN_GCN_unit(256, 256, A_part, A_part, self.num_part, block_size, residual=False)
+        self.part_l2 = TCN_GCN_unit(256, 256, A_part, A_part, self.num_part, block_size)
+
+        # Fuse pooled joint + pooled part features via concatenation.
+        self.fc = nn.Linear(512, num_class)
         nn.init.normal_(self.fc.weight, 0, math.sqrt(2. / num_class))
         bn_init(self.data_bn, 1)
 
     def forward(self, x, keep_prob=0.9):
-
+        # x: (N, C, T, V, M), CTR-GCN style input format.
         N, C, T, V, M = x.size()
-        # print("(N, C, T, V, M) {}, {}, {}, {}, {} ".format( N, C, T, V, M))  # N, C, T, V, M  64 3 100 27 1
-        # import pdb
-        # pdb.set_trace()
+
+        # Step 1) Joint-level input normalization.
+        # (N, C, T, V, M) -> (N, M*V*C, T)
         x = x.permute(0, 4, 3, 1, 2).contiguous().view(N, M * V * C, T)
         x = self.data_bn(x)
-        x = x.view(N, M, V, C, T).permute(0, 1, 3, 4, 2).contiguous().view(N * M, C, T, V)  # 64, 3, 100, 27
+        # -> (N*M, C, T, V)
+        x = x.view(N, M, V, C, T).permute(0, 1, 3, 4, 2).contiguous().view(N * M, C, T, V)
 
+        # Step 2) Joint-level GCN layers.
         x = self.l1(x, keep_prob=1.0)
         x = self.l2(x, keep_prob=1.0)
         x = self.l3(x, keep_prob=1.0)
@@ -269,19 +352,29 @@ class Model(nn.Module):
         x = self.l8(x, keep_prob)
         x = self.l9(x, keep_prob)
         x = self.l10(x, keep_prob)  
-        # print("after l10 ", x.shape)   # torch.Size([64, 256, 25, 27])
-        # N*M,C,T,V
-        c_new = x.size(1)   # c_new:  256
+        # joint feature shape: (N*M, Cj, T, V)
+        c_new = x.size(1)
 
-        # print(x.size())
-        # print(N, M, c_new)
+        # Step 3) Joint -> Part pooling via mapping matrix.
+        # joint_to_part: (V, 4), x: (N*M, Cj, T, V)
+        # x_part: (N*M, Cj, T, 4)
+        x_part = torch.einsum('nctv,vp->nctp', x, self.joint_to_part.to(x.device, dtype=x.dtype))
 
-        # x = x.view(N, M, c_new, -1)
-        x = x.reshape(N, M, c_new, -1)  # torch.Size([64, 1, 256, 675])
-        # print("x.shape ", x.shape)
-        # import pdb
-        # pdb.set_trace()
-        x = x.mean(3).mean(1)  # torch.Size([64, 1, 256, 675]) → torch.Size([64, 1, 256])  → torch.Size([64, 256])
-        # print(x.shape)  # torch.Size([64, 256])
-        
-        return self.fc(x)
+        # Step 4) Part-level GCN layers.
+        # (N*M, Cj, T, 4) -> (N*M, Cp, T, 4)
+        x_part = self.part_l1(x_part, keep_prob=1.0)
+        x_part = self.part_l2(x_part, keep_prob=keep_prob)
+
+        # Step 5) Fuse joint + part pooled features.
+        # Joint pooled: (N*M, Cj, T, V) -> (N, M, Cj, T*V) -> (N, Cj)
+        x_joint_pool = x.reshape(N, M, c_new, -1).mean(3).mean(1)
+
+        # Part pooled: (N*M, Cp, T, 4) -> (N, M, Cp, T*4) -> (N, Cp)
+        x_part_pool = x_part.reshape(N, M, c_new, -1).mean(3).mean(1)
+
+        # Concatenate pooled representations.
+        x_fused = torch.cat([x_joint_pool, x_part_pool], dim=1)  # (N, Cj+Cp) = (N, 512)
+
+        # Step 6) Classification head.
+        out = self.fc(x_fused)  # (N, num_class)
+        return out

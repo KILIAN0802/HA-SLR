@@ -1,0 +1,66 @@
+phase: train
+
+Experiment_name: MultiVSL200/Joint/multivsl200_46_chain_hand_aware_sl_lgcn
+model: model.hand_aware_sl_lgcn.Model
+
+device: [0]
+es_patience: 50
+es: False
+num_epoch: 80
+warm_up_epoch: 20
+train_base_lr: 0.1
+step: [20, 40, 60]
+
+feeder: feeders.feeder_cvpr.Feeder
+
+train_feeder_args:
+  data_path: ./data/MultiVSL200/46_cvpr/train_data_joint.npy
+  label_path: ./data/MultiVSL200/46_cvpr/train_label.pkl
+  debug: False
+  window_size: 150
+  random_choose: True
+  random_shift: False
+  normalization: True
+  random_mirror: False
+  random_mirror_p: 0.5
+  is_vector: False
+
+val_feeder_args:
+  data_path: ./data/MultiVSL200/46_cvpr/val_data_joint.npy
+  label_path: ./data/MultiVSL200/46_cvpr/val_label.pkl
+  debug: False
+  window_size: 150
+  random_choose: False
+  random_shift: False
+  normalization: True
+  random_mirror: False
+  is_vector: False
+
+test_feeder_args:
+  data_path: ./data/MultiVSL200/46_cvpr/test_data_joint.npy
+  label_path: ./data/MultiVSL200/46_cvpr/test_label.pkl
+  debug: False
+  window_size: 150
+  random_choose: False
+  random_shift: False
+  normalization: True
+  random_mirror: False
+  is_vector: False
+
+model_args:
+  num_class: 200
+  num_point: 46
+  num_person: 1
+  graph: graph.multivsl200_46.Graph
+  A_hands: graph.multivsl200_46.Graph
+  groups: 16
+  block_size: 41
+  graph_args:
+    labeling_mode: 'spatial'
+
+weight_decay: 0.0001
+keep_rate: 0.9
+only_train_epoch: 1
+batch_size: 64
+test_batch_size: 64
+nesterov: True
