@@ -134,7 +134,9 @@ class Feeder(Dataset):
 
 
 def import_class(name):
-    return importlib.import_module(name)
+    components = name.split('.')
+    module = importlib.import_module('.'.join(components[:-1]))
+    return getattr(module, components[-1])
 
 
 def test(data_path, label_path, vid=None, graph=None, is_3d=False):

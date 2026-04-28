@@ -840,7 +840,9 @@ class Processor():
         shutil.copy(os.path.abspath(__file__), self.args.work_dir)
 
 def import_class(name):
-    return importlib.import_module(name)
+    components = name.split('.')
+    module = importlib.import_module('.'.join(components[:-1]))
+    return getattr(module, components[-1])
 
 if __name__ == '__main__':
 
