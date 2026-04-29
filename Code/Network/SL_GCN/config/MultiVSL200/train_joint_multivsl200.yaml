@@ -48,7 +48,7 @@ test_feeder_args:
   is_vector: False
 
 model_args:
-  num_class: 262
+  num_class: 200
   num_point: 46
   num_person: 1
   graph: graph.multivsl200_46.Graph
