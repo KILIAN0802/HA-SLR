@@ -8,23 +8,34 @@ Tạo 4 luồng dữ liệu từ Joint data:
   3. Joint Motion (temporal diff of Joint)
   4. Bone Motion (temporal diff of Bone)
 
-Usage:
-  python generate_multivsl200_4streams.py --data_dir ../data/MultiVSL200
+Supports 2 configs:
+  - 46_all: Use all 46 joints from MultiVSL200 (default)
+  - 46_to_27: Use 27-joint HA-SLR format with dummy elbows (from 46→27 mapping)
 
-Output:
+Usage:
+  # Generate 4 streams for 46-joint version
+  python generate_multivsl200_4streams.py \\
+    --data_dir ../data/MultiVSL200 \\
+    --config 46_all
+
+  # Generate 4 streams for 27-joint version (HA-SLR compatible)
+  python generate_multivsl200_4streams.py \\
+    --data_dir ../data/MultiVSL200 \\
+    --config 46_to_27
+
+Output (46_all):
   MultiVSL200/
-    ├── train_data_joint.npy        ✓ (already exists)
-    ├── val_data_joint.npy          ✓ (already exists)
-    ├── test_data_joint.npy         ✓ (already exists)
-    ├── train_data_bone.npy         ← NEW
-    ├── val_data_bone.npy           ← NEW
-    ├── test_data_bone.npy          ← NEW
-    ├── train_data_joint_motion.npy ← NEW
-    ├── val_data_joint_motion.npy   ← NEW
-    ├── test_data_joint_motion.npy  ← NEW
-    ├── train_data_bone_motion.npy  ← NEW
-    ├── val_data_bone_motion.npy    ← NEW
-    └── test_data_bone_motion.npy   ← NEW
+    ├── *_data_joint.npy           (N, 3, 150, 46, 1) [existing]
+    ├── *_data_bone.npy            ← NEW
+    ├── *_data_joint_motion.npy    ← NEW
+    ├── *_data_bone_motion.npy     ← NEW
+
+Output (46_to_27):
+  MultiVSL200/
+    ├── *_data_joint.npy           (N, 3, 150, 27, 1) [from 46_to_27 config, with dummy elbows]
+    ├── *_data_bone.npy            ← NEW
+    ├── *_data_joint_motion.npy    ← NEW
+    ├── *_data_bone_motion.npy     ← NEW
 """
 
 import os
@@ -55,8 +66,27 @@ BONE_PAIRS_46 = [
     (1, 2), (11, 12),
 ]
 
-# For reference: 27-point sign language skeleton (sign_27_cvpr)
+# For 27-point HA-SLR skeleton with dummy elbows from MultiVSL200 46→27 mapping
+# Note: Indices 3, 4 (elbows) are dummy values from shoulders (indices 1, 2)
 BONE_PAIRS_27 = [
+    # Body chain
+    (5, 6), (5, 7),                    # Shoulder connections
+    (6, 8), (8, 10), (7, 9), (9, 11), # Arm chain (note: 3,4 are dummy elbows)
+    
+    # Left hand
+    (12, 13), (12, 14), (12, 16), (12, 18), (12, 20),
+    (14, 15), (16, 17), (18, 19), (20, 21),
+    
+    # Right hand
+    (22, 23), (22, 24), (22, 26), (22, 28), (22, 30),
+    (24, 25), (26, 27), (28, 29), (30, 31),
+    
+    # Wrist to hand root
+    (10, 12), (11, 22),
+]
+
+# For reference: Full 27-point sign language skeleton (sign_27_cvpr)
+_BONE_PAIRS_27_CVPR = [
     (5, 6), (5, 7),
     (6, 8), (8, 10), (7, 9), (9, 11),
     (12, 13), (12, 14), (12, 16), (12, 18), (12, 20),
@@ -68,13 +98,34 @@ BONE_PAIRS_27 = [
 
 
 class MultiStream46Generator:
-    """Generate 4-stream data for 46-point skeleton"""
+    """Generate 4-stream data for 46-point or 27-point skeleton"""
     
-    def __init__(self, data_dir, num_joints=46, bone_pairs=None):
+    def __init__(self, data_dir, config='46_all', num_joints=None, bone_pairs=None):
+        """
+        Initialize multi-stream generator
+        
+        Args:
+            data_dir: Directory containing *_data_joint.npy files
+            config: '46_all' (default) or '46_to_27'
+            num_joints: Override number of joints (auto-detected from config if None)
+            bone_pairs: Override bone pairs (auto-selected from config if None)
+        """
         self.data_dir = data_dir
-        self.num_joints = num_joints
-        self.bone_pairs = bone_pairs if bone_pairs else BONE_PAIRS_46
+        self.config = config
         self.splits = ['train', 'val', 'test']
+        
+        # Auto-configure based on config name
+        if config == '46_all':
+            self.num_joints = num_joints or 46
+            self.bone_pairs = bone_pairs or BONE_PAIRS_46
+            self.config_desc = "46-joint full skeleton"
+        elif config == '46_to_27':
+            self.num_joints = num_joints or 27
+            self.bone_pairs = bone_pairs or BONE_PAIRS_27
+            self.config_desc = "27-joint HA-SLR format (with dummy elbows)"
+        else:
+            raise ValueError(f"Unknown config: {config}. Use '46_all' or '46_to_27'")
+    
     
     def generate_bone_data(self, joint_data, output_path):
         """
@@ -200,6 +251,7 @@ class MultiStream46Generator:
         print("MultiVSL200 Multi-Stream Data Generator (4 streams)")
         print("="*70)
         print(f"Data directory: {self.data_dir}")
+        print(f"Config: {self.config} ({self.config_desc})")
         print(f"Number of joints: {self.num_joints}")
         print(f"Number of bone pairs: {len(self.bone_pairs)}")
         
@@ -217,6 +269,7 @@ class MultiStream46Generator:
         print("  Stream 3: *_data_joint_motion.npy")
         print("  Stream 4: *_data_bone_motion.npy")
         print("\nReady for multi-stream training!")
+        print(f"Use config --config {self.config} in training script.")
 
 
 def main():
@@ -230,10 +283,17 @@ def main():
         help='Directory containing *_data_joint.npy files'
     )
     parser.add_argument(
+        '--config',
+        type=str,
+        default='46_all',
+        choices=['46_all', '46_to_27'],
+        help='Configuration: 46_all (default, all 46 joints) or 46_to_27 (27-joint HA-SLR format with dummy elbows)'
+    )
+    parser.add_argument(
         '--num_joints',
         type=int,
-        default=46,
-        help='Number of joints in skeleton (default: 46 for MultiVSL200)'
+        default=None,
+        help='Number of joints in skeleton (auto-detected from config if not specified)'
     )
     
     args = parser.parse_args()
@@ -244,7 +304,7 @@ def main():
         sys.exit(1)
     
     # Generate all 4 streams
-    generator = MultiStream46Generator(args.data_dir, args.num_joints)
+    generator = MultiStream46Generator(args.data_dir, config=args.config, num_joints=args.num_joints)
     generator.run()
 
 

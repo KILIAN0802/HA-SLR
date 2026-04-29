@@ -8,10 +8,17 @@ This script:
   4. Writes *_label.pkl and *_data_joint.npy for each split
 
 Usage:
+  # Generate 46-joint version (MultiVSL200 native)
   python generate_multivsl200_splits.py --data_dir ../../../data/MultiVSL200 --out_dir ../../../data/MultiVSL200 --config 46_all
 
+  # Generate 27-joint version (compatible with HA-SLR models, with dummy elbow values)
+  python generate_multivsl200_splits.py --data_dir ../../../data/MultiVSL200 --out_dir ../../../data/MultiVSL200 --config 46_to_27
+
 Note: 
-  - MultiVSL200 .npy files have 46 joints (already pre-selected). Use config='46_all'.
+  - MultiVSL200 .npy files have 46 joints (already pre-selected).
+  - Use config='46_all' to generate all 46 joints (default)
+  - Use config='46_to_27' to generate 27 joints for HA-SLR compatibility
+    (Elbow points are dummy values copied from Shoulder due to MultiVSL200 structure)
   - For other datasets with 133 joints, use config='27_cvpr'.
   - Ensure MultiVSL200/splits/ contains train_labels.csv, val_labels.csv, test_labels.csv
     and raw .npy files are in the MultiVSL200/ directory.
@@ -31,6 +38,22 @@ selected_joints = {
                                [112, 116, 117, 120, 121, 124, 125, 128, 129, 132]), axis=0),
     # MultiVSL200 has only 46 joints (already selected skeleton points)
     '46_all': np.arange(46),  # Use all 46 joints
+    
+    # Mapping từ 46 điểm MultiVSL200 sang 27 điểm HA-SLR
+    # HA-SLR 27-point layout: 0:Nose, 1:L-Sho, 2:R-Sho, 3:L-Elb(dummy), 4:R-Elb(dummy), 
+    #                         5:L-Wri, 6:R-Wri, 7-16:L-Hand, 17-26:R-Hand
+    # MultiVSL200 46-point layout (estimates from original skeleton):
+    #   0-1: Nose, 2-9: Body, 10-21: L-Hand(12 joints), 22-33: R-Hand(12 joints), 34-45: ???
+    # 
+    # Chiến lược: Sử dụng các điểm có sẵn trong 46-joint format, với dummy values cho khuỷu tay
+    # (Elbow được lấy từ Shoulder vì MultiVSL200 thiếu điểm này)
+    '46_to_27': np.array([
+        42, 43, 44,          # 0-2: Nose, L-Shoulder, R-Shoulder
+        43, 44,              # 3-4: L-Elbow(dummy=L-Sho), R-Elbow(dummy=R-Sho)
+        0, 21,               # 5-6: L-Wrist, R-Wrist (từ hand indices)
+        0, 4, 5, 8, 9, 12, 13, 16, 17, 20,      # 7-16: L-Hand 10 joints
+        21, 25, 26, 29, 30, 33, 34, 37, 38, 41  # 17-26: R-Hand 10 joints
+    ], dtype=int),
 }
 
 MAX_BODY = 1
@@ -158,7 +181,7 @@ def main():
         '--config',
         type=str,
         default='46_all',
-        help='Joint config to use (46_all for MultiVSL200, 27_cvpr for others)'
+        help='Joint config to use: 46_all (all MultiVSL200 joints), 46_to_27 (27-joint HA-SLR format with dummy elbows), or 27_cvpr (OpenPose 133-joint subset)'
     )
     
     args = parser.parse_args()
