@@ -299,6 +299,8 @@ class Model(nn.Module):
     def __init__(self, num_class=60, num_point=25, num_person=2, groups=8, block_size=41, graph=None, A_hands=None, graph_args=dict(), in_channels=3):
         super(Model, self).__init__()
 
+        self.num_point = num_point
+
         if graph is None:
             raise ValueError()
         else:
@@ -344,6 +346,14 @@ class Model(nn.Module):
     def forward(self, x, keep_prob=0.9):
         # x: (N, C, T, V, M), CTR-GCN style input format.
         N, C, T, V, M = x.size()
+
+        if V != self.num_point:
+            if V < self.num_point:
+                pad = x.new_zeros(N, C, T, self.num_point - V, M)
+                x = torch.cat((x, pad), dim=3)
+            else:
+                x = x[:, :, :, :self.num_point, :]
+            V = self.num_point
 
         # Step 1) Joint-level input normalization.
         # (N, C, T, V, M) -> (N, M*V*C, T)
