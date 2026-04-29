@@ -72,13 +72,14 @@ def get_spatial_graph(num_node, self_link, inward, outward):
 class Graph:
     """Graph layout for 46 Mediapipe keypoints"""
 
-    def __init__(self, layout='vsl_layout', strategy='spatial', max_hop=1, dilation=1):
+    def __init__(self, layout='vsl_layout', strategy='spatial', max_hop=1, dilation=1, labeling_mode='spatial'):
         self.max_hop = max_hop
         self.dilation = dilation
         self.num_node = 46
 
         self.layout = layout
         self.strategy = strategy
+        self.labeling_mode = labeling_mode
 
         # Define inward edges
         self.inward = self._get_inward_edges()
@@ -87,7 +88,7 @@ class Graph:
         self.neighbor = self.inward + self.outward
 
         # adjacency
-        self.A = self.get_adjacency_matrix()
+        self.A = self.get_adjacency_matrix(labeling_mode)
 
     def _get_inward_edges(self):
         inward = []
@@ -119,8 +120,11 @@ class Graph:
 
         return inward
 
-    def get_adjacency_matrix(self):
-        if self.strategy == 'spatial':
+    def get_adjacency_matrix(self, labeling_mode=None):
+        if labeling_mode is None:
+            labeling_mode = self.labeling_mode
+
+        if labeling_mode == 'spatial' and self.strategy == 'spatial':
             return get_spatial_graph(self.num_node, self.self_link, self.inward, self.outward)
         else:
             raise ValueError("Only 'spatial' strategy is supported")
