@@ -135,5 +135,5 @@ dmypy.json
 *.pkl
 node_modules/
 .venv/
-Code/Network/SL_GCN/work_dir/
-Code/Network/SL_GCN/data/
+HA-SLR/Code/Network/SL_GCN/work_dir/
+HA-SLR/Code/Network/SL_GCN/data/
