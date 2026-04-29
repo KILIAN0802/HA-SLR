@@ -10,11 +10,22 @@ import os
 
 
 def import_class(name):
-    components = name.split('.')
-    mod = __import__(components[0])
-    for comp in components[1:]:
-        mod = getattr(mod, comp)
-    return mod
+    import importlib
+
+    # Support both module-only names (for example: graph.multivsl200_46)
+    # and fully qualified symbols (for example: graph.multivsl200_46.Graph).
+    try:
+        module = importlib.import_module(name)
+    except ModuleNotFoundError:
+        components = name.split('.')
+        if len(components) == 1:
+            raise
+        module_name = '.'.join(components[:-1])
+        symbol_name = components[-1]
+        module = importlib.import_module(module_name)
+        return getattr(module, symbol_name)
+
+    return getattr(module, 'Graph', module)
 
 
 # def conv_branch_init(conv):
