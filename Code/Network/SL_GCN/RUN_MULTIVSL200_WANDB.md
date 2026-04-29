@@ -81,6 +81,7 @@ print('num samples:', len(names), 'num labels:', len(labels), 'label range:', in
 Expected key points:
 - `V = 46`
 - data shape format is `(N, C, T, V, M)`
+- `num_class` must match the label range. For the attached dataset, the observed labels span `0..261`, so the classifier head needs `262` outputs.
 
 ## 7) Train (without WandB)
 

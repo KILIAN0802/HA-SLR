@@ -32,4 +32,4 @@ python main_base.py --config config/MultiVSL200/train_joint_multivsl200.yaml
 
 - The repo has no official 46-node graph for this dataset, so `graph.multivsl200_46.Graph` uses a simple chain graph as a safe default.
 - `random_mirror` is disabled because there is no left-right joint mapping for the 46-keypoint layout.
-- `num_class` is set to 200 because the dataset name suggests 200 classes; adjust it if your labels differ.
+- `num_class` is set to 262 because the attached labels span 0..261; keep this in sync with the label files and checkpoint head.
