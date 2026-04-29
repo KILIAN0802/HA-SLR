@@ -137,3 +137,5 @@ node_modules/
 .venv/
 Code/Network/SL_GCN/work_dir/
 Code/Network/SL_GCN/data/
+
+work_dir/

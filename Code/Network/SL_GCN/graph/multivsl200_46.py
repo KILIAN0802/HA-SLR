@@ -1,6 +1,4 @@
 import numpy as np
-import torch
-torch.cuda.empty_cache()
 
 
 # =========================================================
@@ -74,15 +72,13 @@ def get_spatial_graph(num_node, self_link, inward, outward):
 class Graph:
     """Graph layout for 46 Mediapipe keypoints"""
 
-    def __init__(self, layout='vsl_layout', strategy='spatial', max_hop=1, dilation=1, labeling_mode=None, **kwargs):
+    def __init__(self, layout='vsl_layout', strategy='spatial', max_hop=1, dilation=1):
         self.max_hop = max_hop
         self.dilation = dilation
         self.num_node = 46
 
         self.layout = layout
         self.strategy = strategy
-        self.labeling_mode = labeling_mode
-        # absorb any extra unused kwargs to avoid TypeError if config passes more
 
         # Define inward edges
         self.inward = self._get_inward_edges()

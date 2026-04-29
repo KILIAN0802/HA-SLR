@@ -725,7 +725,9 @@ class Processor():
 
         elif self.args.phase.lower() == 'test':
 
-            if not os.path.exists(self.args.weights):
+            # Support calling test without --weights (None): try auto-discovery.
+            # Avoid calling os.path.exists on None which raises TypeError.
+            if not getattr(self.args, 'weights', None) or not os.path.exists(self.args.weights):
                 
                 from datetime import datetime
                 self.args.pretrain_work_dir = os.path.join("./work_dir", self.args.Experiment_name+"/bs{}_f{}_lr{}_warmup*{}/{}".format(
