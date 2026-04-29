@@ -67,33 +67,28 @@ BONE_PAIRS_46 = [
 ]
 
 # For 27-point HA-SLR skeleton with dummy elbows from MultiVSL200 46→27 mapping
+# 27-point layout:
+#   0: Nose
+#   1: L-Shoulder, 2: R-Shoulder
+#   3: L-Elbow(dummy), 4: R-Elbow(dummy)  ← dummy values = shoulders (indices 1,2)
+#   5: L-Wrist, 6: R-Wrist
+#   7-16: L-Hand (10 joints), 17-26: R-Hand (10 joints)
 # Note: Indices 3, 4 (elbows) are dummy values from shoulders (indices 1, 2)
 BONE_PAIRS_27 = [
     # Body chain
-    (5, 6), (5, 7),                    # Shoulder connections
-    (6, 8), (8, 10), (7, 9), (9, 11), # Arm chain (note: 3,4 are dummy elbows)
+    (0, 1), (0, 2),                    # Nose -> Shoulders
+    (1, 3), (3, 5), (2, 4), (4, 6),    # Shoulder -> Elbow(dummy) -> Wrist
     
-    # Left hand
-    (12, 13), (12, 14), (12, 16), (12, 18), (12, 20),
-    (14, 15), (16, 17), (18, 19), (20, 21),
+    # Left hand (starting from index 7)
+    (7, 8), (7, 9), (7, 11), (7, 13), (7, 15),  # Left hand root -> fingers
+    (9, 10), (11, 12), (13, 14), (15, 16),      # Finger joints
     
-    # Right hand
-    (22, 23), (22, 24), (22, 26), (22, 28), (22, 30),
-    (24, 25), (26, 27), (28, 29), (30, 31),
+    # Right hand (starting from index 17)
+    (17, 18), (17, 19), (17, 21), (17, 23), (17, 25),  # Right hand root -> fingers
+    (19, 20), (21, 22), (23, 24), (25, 26),           # Finger joints
     
     # Wrist to hand root
-    (10, 12), (11, 22),
-]
-
-# For reference: Full 27-point sign language skeleton (sign_27_cvpr)
-_BONE_PAIRS_27_CVPR = [
-    (5, 6), (5, 7),
-    (6, 8), (8, 10), (7, 9), (9, 11),
-    (12, 13), (12, 14), (12, 16), (12, 18), (12, 20),
-    (14, 15), (16, 17), (18, 19), (20, 21),
-    (22, 23), (22, 24), (22, 26), (22, 28), (22, 30),
-    (24, 25), (26, 27), (28, 29), (30, 31),
-    (10, 12), (11, 22)
+    (5, 7), (6, 17),
 ]
 
 

@@ -412,6 +412,26 @@ train_feeder_args:
 - `--config 46_all` for 46-joint data
 - `--config 46_to_27` for data pre-processed with 46_to_27 config
 
+### "IndexError: index 28 is out of bounds for axis 3 with size 27"
+
+**Status**: ✅ FIXED in latest version
+
+This was a critical bug in BONE_PAIRS_27 indexing. It has been **FIXED**.
+
+**Solution**: Update your code:
+
+```bash
+git pull origin 46kpt
+```
+
+Then re-run:
+
+```bash
+python generate_multivsl200_4streams.py --config 46_to_27
+```
+
+**Details**: See [BUGFIX_BONE_PAIRS_27_INDEX_MISMATCH.md](BUGFIX_BONE_PAIRS_27_INDEX_MISMATCH.md)
+
 ### "FileNotFoundError: train_data_joint.npy"
 
 **Solution**: Ensure Phase 2 completed successfully. Check file exists:

@@ -184,13 +184,14 @@ python generate_multivsl200_4streams.py --config 46_to_27 --data_dir ../data/Mul
 
 ### New Files Created
 
-| File                           | Type      | Purpose                |
-| ------------------------------ | --------- | ---------------------- |
-| WORKFLOW_EXAMPLES.sh           | Script    | Runnable examples      |
-| FULL_PIPELINE_GUIDE.md         | Guide     | Complete documentation |
-| ELBOW_GAP_AND_JOINT_MAPPING.md | Reference | Technical depth        |
-| CHANGES_SUMMARY.md             | ChangeLog | What was changed       |
-| PREPROCESSING_README.md        | This file | Navigation guide       |
+| File                                   | Type       | Purpose                          |
+| -------------------------------------- | ---------- | -------------------------------- |
+| WORKFLOW_EXAMPLES.sh                   | Script     | Runnable examples                |
+| FULL_PIPELINE_GUIDE.md                 | Guide      | Complete documentation           |
+| ELBOW_GAP_AND_JOINT_MAPPING.md         | Reference  | Technical depth                  |
+| CHANGES_SUMMARY.md                     | ChangeLog  | What was changed                 |
+| BUGFIX_BONE_PAIRS_27_INDEX_MISMATCH.md | ⚠ Critical | Bug fix (BONE_PAIRS_27 indexing) |
+| PREPROCESSING_README.md                | This file  | Navigation guide                 |
 
 ---
 
@@ -353,8 +354,9 @@ df -h
 **Advanced**:
 
 1. ELBOW_GAP_AND_JOINT_MAPPING.md (technical details)
-2. CHANGES_SUMMARY.md (code changes)
-3. Source code: `generate_multivsl200_*.py`
+2. BUGFIX_BONE_PAIRS_27_INDEX_MISMATCH.md (critical bug fix ⚠)
+3. CHANGES_SUMMARY.md (code changes)
+4. Source code: `generate_multivsl200_*.py`
 
 ---
 
