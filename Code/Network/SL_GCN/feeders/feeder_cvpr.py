@@ -78,6 +78,28 @@ class Feeder(Dataset):
             with open(self.label_path, 'rb') as f:
                 self.sample_name, self.label = pickle.load(f, encoding='latin1')
 
+        self.label = np.asarray(self.label, dtype=np.int64)
+        if self.label.size == 0:
+            raise ValueError(f"Empty label file: {self.label_path}")
+
+        label_min = int(self.label.min())
+        label_max = int(self.label.max())
+
+        # Some generated datasets store labels as 1..N instead of 0..N-1.
+        # Normalize those to zero-based indexing so CrossEntropyLoss receives valid targets.
+        if label_min == 1:
+            self.label = self.label - 1
+            label_min -= 1
+            label_max -= 1
+
+        if label_min < 0:
+            raise ValueError(
+                f"Invalid negative label detected in {self.label_path}: min={label_min}, max={label_max}"
+            )
+
+        # Upper bound of the observed label space for later validation against the model head.
+        self.num_class = label_max + 1
+
 
         if self.debug:
             self.label = self.label[0:100]

@@ -215,6 +215,37 @@ class Processor():
             num_workers=self.args.num_worker,
             drop_last=False,
             worker_init_fn=init_seed)
+
+        self.validate_label_space()
+
+    def validate_label_space(self):
+        if not hasattr(self, 'data_loader'):
+            return
+
+        observed_max = None
+        observed_ranges = []
+        for split_name, loader in self.data_loader.items():
+            dataset = loader.dataset
+            labels = np.asarray(dataset.label, dtype=np.int64)
+            if labels.size == 0:
+                continue
+            split_min = int(labels.min())
+            split_max = int(labels.max())
+            observed_ranges.append((split_name, split_min, split_max))
+            observed_max = split_max if observed_max is None else max(observed_max, split_max)
+
+        model_num_class = None
+        if hasattr(self, 'model') and hasattr(self.model, 'fc') and hasattr(self.model.fc, 'out_features'):
+            model_num_class = int(self.model.fc.out_features)
+
+        if model_num_class is not None and observed_max is not None and observed_max >= model_num_class:
+            details = ', '.join(f'{name}:[{mn}, {mx}]' for name, mn, mx in observed_ranges)
+            raise ValueError(
+                'Label space is incompatible with the model head: '
+                f'max label {observed_max} must be smaller than num_class {model_num_class}. '
+                f'Observed ranges: {details}'
+            )
+
     def load_model(self):
         # 1. Xác định thiết bị (CPU hoặc GPU)
         use_cuda = torch.cuda.is_available()
@@ -263,6 +294,16 @@ class Processor():
                     cleaned_weights[k.split('module.')[-1]] = v.to(self.device)
             weights = cleaned_weights
 
+            if hasattr(self.model, 'fc') and hasattr(self.model.fc, 'out_features') and 'fc.weight' in weights:
+                expected_classes = int(self.model.fc.out_features)
+                checkpoint_classes = int(weights['fc.weight'].shape[0])
+                if checkpoint_classes != expected_classes:
+                    raise ValueError(
+                        'Checkpoint classifier size mismatch: '
+                        f'checkpoint has {checkpoint_classes} classes but model expects {expected_classes}. '
+                        f'Checkpoint path: {self.args.weights}'
+                    )
+
             if len(weights) == 0:
                 raise ValueError('No tensor weights found in checkpoint: {}'.format(self.args.weights))
 
@@ -284,6 +325,8 @@ class Processor():
                     print('  ' + d)
                 state.update(weights)
                 self.model.load_state_dict(state)
+
+        self.validate_label_space()
 
         # 6. Hỗ trợ chạy đa GPU (DataParallel)
         if use_cuda and isinstance(self.args.device, list):
