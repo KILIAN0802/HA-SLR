@@ -78,3 +78,30 @@ Code/Network/SL_GCN/
 - Each teammate must run these scripts locally after cloning
 - Use `--config 27_cvpr` to select 27 key joint points from 133 total
 - Processing time: ~10-30 minutes depending on hardware
+
+## Train Stop and Auto Resume
+
+After preprocessing finishes, training can be stopped safely in Colab and resumed later from the latest checkpoint.
+
+### Stop training
+
+- In Colab, click the stop button or interrupt the running cell.
+- The latest checkpoint is written under the run directory in `Code/Network/SL_GCN/work_dir/.../checkpoints/`.
+
+### Resume training
+
+Use one of these options when you restart the session:
+
+```bash
+python main_base.py --config <your_train_config.yaml> --resume-checkpoint ./work_dir/.../checkpoints/<experiment>_latest.pt
+```
+
+```bash
+python main_base.py --config <your_train_config.yaml> --auto-resume True
+```
+
+### Behavior
+
+- `--resume-checkpoint` resumes from the exact checkpoint you pass in.
+- `--auto-resume True` searches for the newest `*_latest.pt` for the same `Experiment_name` and continues from the saved epoch.
+- If no checkpoint exists, training starts from scratch.
