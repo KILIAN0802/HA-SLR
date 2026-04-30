@@ -4,8 +4,9 @@ import random
 from collections import defaultdict
 
 ROOT = os.path.dirname(__file__)
-FILES_DIR = ROOT
-OUT_DIR = os.path.join(ROOT, 'splits')
+# Always read raw files from data/MultiVSL200 and write outputs to data/MultiVSL200/splits
+FILES_DIR = os.path.normpath(os.path.join(ROOT, '..', 'data', 'MultiVSL200'))
+OUT_DIR = os.path.join(FILES_DIR, 'splits')
 SEED = 42
 
 os.makedirs(OUT_DIR, exist_ok=True)
