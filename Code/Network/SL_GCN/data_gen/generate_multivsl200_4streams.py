@@ -173,22 +173,51 @@ class MultiStream46Generator:
         """
         N, C, T, V, M = data.shape
         
-        # Create output memmap
-        motion_fp = open_memmap(
-            output_path,
-            dtype='float32',
-            mode='w+',
-            shape=(N, C, T, V, M)
-        )
-        
-        # Calculate temporal differences
+        # If file exists, open in read+ mode and attempt to resume
+        if os.path.exists(output_path):
+            print(f"  ⚠ File already exists. Attempting to resume: {output_path}")
+            motion_fp = open_memmap(output_path, dtype='float32', mode='r+')
+            if motion_fp.shape != (N, C, T, V, M):
+                print("  ✗ Existing file shape mismatch. Recreating file from scratch...")
+                del motion_fp
+                motion_fp = open_memmap(
+                    output_path,
+                    dtype='float32',
+                    mode='w+',
+                    shape=(N, C, T, V, M)
+                )
+                start_t = 0
+            else:
+                # Find first frame index that appears unwritten (all zeros)
+                start_t = None
+                for t in range(T - 1):
+                    if not motion_fp[:, :, t, :, :].any():
+                        start_t = t
+                        break
+                if start_t is None:
+                    # All frames written (or contain non-zero values) — assume complete
+                    print(f"  ⚑ Motion file appears complete; skipping generation: {output_path}")
+                    del motion_fp
+                    return np.load(output_path)
+                print(f"  Resuming {data_type} motion from frame {start_t}/{T-1}...")
+        else:
+            # Create output memmap
+            motion_fp = open_memmap(
+                output_path,
+                dtype='float32',
+                mode='w+',
+                shape=(N, C, T, V, M)
+            )
+            start_t = 0
+
+        # Calculate temporal differences (resumeable)
         print(f"  Calculating {data_type} motion (temporal diff)...")
-        for t in tqdm(range(T - 1), desc="Frames"):
+        for t in tqdm(range(start_t, T - 1), desc="Frames"):
             motion_fp[:, :, t, :, :] = data[:, :, t + 1, :, :] - data[:, :, t, :, :]
-        
-        # Last frame: zero motion
+
+        # Ensure last frame is set to zero (in case it was not written yet)
         motion_fp[:, :, T - 1, :, :] = 0
-        
+
         motion_fp.flush()
         del motion_fp
         print(f"  ✓ Saved: {output_path}")
