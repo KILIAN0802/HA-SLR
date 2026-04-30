@@ -9,10 +9,10 @@ This script:
 
 Usage:
   # Generate 46-joint version (MultiVSL200 native)
-  python generate_multivsl200_splits.py --data_dir ../../../data/MultiVSL200 --out_dir ../../../data/MultiVSL200 --config 46_all
+    python generate_multivsl200_splits.py --data_dir ../data/MultiVSL200 --split_dir ../data/MultiVSL200/splits --out_dir ../data/MultiVSL200 --config 46_all
 
   # Generate 27-joint version (compatible with HA-SLR models, with dummy elbow values)
-  python generate_multivsl200_splits.py --data_dir ../../../data/MultiVSL200 --out_dir ../../../data/MultiVSL200 --config 46_to_27
+    python generate_multivsl200_splits.py --data_dir ../data/MultiVSL200 --split_dir ../data/MultiVSL200/splits --out_dir ../data/MultiVSL200_27 --config 46_to_27
 
 Note: 
   - MultiVSL200 .npy files have 46 joints (already pre-selected).
@@ -30,6 +30,10 @@ import pickle
 import sys
 import numpy as np
 from tqdm import tqdm
+
+ROOT = os.path.dirname(__file__)
+DEFAULT_DATA_DIR = os.path.normpath(os.path.join(ROOT, '..', 'data', 'MultiVSL200'))
+DEFAULT_SPLIT_DIR = os.path.join(DEFAULT_DATA_DIR, 'splits')
 
 # Joint selection configs (same as sign_gendata.py)
 selected_joints = {
@@ -162,19 +166,19 @@ def main():
     parser.add_argument(
         '--data_dir',
         type=str,
-        default='../../../data/MultiVSL200',
+        default=DEFAULT_DATA_DIR,
         help='Directory containing raw .npy skeleton files'
     )
     parser.add_argument(
         '--split_dir',
         type=str,
-        default='../../../data/MultiVSL200/splits',
+        default=DEFAULT_SPLIT_DIR,
         help='Directory containing train/val/test_labels.csv'
     )
     parser.add_argument(
         '--out_dir',
         type=str,
-        default='../../../data/MultiVSL200',
+        default=DEFAULT_DATA_DIR,
         help='Output directory for .pkl and .npy files'
     )
     parser.add_argument(

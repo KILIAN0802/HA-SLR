@@ -39,9 +39,7 @@ Ready for training with 4-stream models ✓
 ```bash
 cd Code/Network/SL_GCN/data_gen
 
-python create_splits_by_signer.py \
-  --data_dir ../data/MultiVSL200 \
-  --out_dir ../data/MultiVSL200/splits
+python create_splits_by_signer.py
 
 # Output:
 # - splits/train_labels.csv (4515 samples, 22 signers)
@@ -274,9 +272,7 @@ cd Code/Network/SL_GCN/data_gen
 
 # Step 2: Phase 1 - Create splits (if not already done)
 echo "=== Phase 1: Creating splits ==="
-python create_splits_by_signer.py \
-  --data_dir ../data/MultiVSL200 \
-  --out_dir ../data/MultiVSL200/splits
+python create_splits_by_signer.py
 
 # Step 3a: Phase 2A - Generate 46-joint data
 echo "=== Phase 2A: Generating 46-joint data ==="

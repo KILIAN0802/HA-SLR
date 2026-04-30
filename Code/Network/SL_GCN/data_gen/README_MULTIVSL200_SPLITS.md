@@ -8,7 +8,7 @@ This guide explains how to generate train/val/test splits for the MultiVSL200 da
 
 ### Step 1: Generate Split CSV Files (signer allocation)
 
-From `Code/Network/SL_GCN/data/MultiVSL200/`, run:
+From `Code/Network/SL_GCN/data_gen/`, run:
 
 ```bash
 python create_splits_by_signer.py
@@ -41,9 +41,8 @@ python generate_multivsl200_splits.py \
 ### One-line Execution (All at once)
 
 ```bash
-cd Code/Network/SL_GCN/data/MultiVSL200 && \
+cd Code/Network/SL_GCN/data_gen && \
 python create_splits_by_signer.py && \
-cd ../../data_gen && \
 python generate_multivsl200_splits.py --data_dir ../data/MultiVSL200 --split_dir ../data/MultiVSL200/splits --out_dir ../data/MultiVSL200 --config 46_all
 ```
 
@@ -54,7 +53,6 @@ Code/Network/SL_GCN/
 ├── data/
 │   └── MultiVSL200/
 │       ├── *.npy                    (raw skeleton files)
-│       ├── create_splits_by_signer.py
 │       └── splits/                  (generated)
 │           ├── train_labels.csv
 │           ├── val_labels.csv
@@ -63,6 +61,7 @@ Code/Network/SL_GCN/
 │           ├── val_files.txt
 │           └── test_files.txt
 └── data_gen/
+  ├── create_splits_by_signer.py
     ├── generate_multivsl200_splits.py
     └── README.md (this file)
 ```

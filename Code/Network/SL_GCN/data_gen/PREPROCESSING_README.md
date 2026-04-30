@@ -321,7 +321,7 @@ python generate_multivsl200_4streams.py --config 46_to_27
 
 ```bash
 # Solution: Run Phase 1 first
-python create_splits_by_signer.py --data_dir ../data/MultiVSL200 --out_dir ../data/MultiVSL200/splits
+python create_splits_by_signer.py
 ```
 
 ### Error: "MemoryError" during phase 4

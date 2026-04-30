@@ -25,9 +25,7 @@ echo "  - splits/val_labels.csv (791 samples)"
 echo "  - splits/test_labels.csv (593 samples)"
 echo ""
 
-python create_splits_by_signer.py \
-  --data_dir ../data/MultiVSL200 \
-  --out_dir ../data/MultiVSL200/splits
+python create_splits_by_signer.py
 
 echo "✓ Phase 1 complete!"
 echo ""
@@ -208,9 +206,7 @@ INDIVIDUAL COMMAND EXAMPLES
 # If you need to re-run individual phases:
 
 # Phase 1 only:
-python create_splits_by_signer.py \
-  --data_dir ../data/MultiVSL200 \
-  --out_dir ../data/MultiVSL200/splits
+python create_splits_by_signer.py
 
 # Phase 2A only (46-joint):
 python generate_multivsl200_splits.py \
