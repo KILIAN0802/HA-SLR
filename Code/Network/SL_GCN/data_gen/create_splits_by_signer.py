@@ -49,7 +49,7 @@ splits = {
 }
 
 # helper to parse label from filename prefix (e.g., '23_Name_...')
-label_re = re.compile(r'^(\d+)_')
+label_re = re.compile(r'ord1_(\d+)')
 
 for part, s_list in splits.items():
     out_csv = os.path.join(OUT_DIR, f'{part}_labels.csv')
