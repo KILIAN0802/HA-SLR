@@ -1,7 +1,11 @@
 import os
 import re
 import random
+import sys
 from collections import defaultdict
+
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
 
 ROOT = os.path.dirname(__file__)
 # Always read raw files from data/MultiVSL200 and write outputs to data/MultiVSL200/splits
@@ -60,7 +64,7 @@ for part, s_list in splits.items():
     samples = sorted(samples)
     with open(out_csv, 'w', encoding='utf-8') as fo, open(out_list, 'w', encoding='utf-8') as fl:
         for name in samples:
-            m = label_re.match(name)
+            m = label_re.search(name)
             label = m.group(1) if m else ''
             fo.write(f'{name},{label}\n')
             fl.write(f'{name}.npy\n')
