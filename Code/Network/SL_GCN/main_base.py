@@ -285,7 +285,7 @@ class Processor():
                 with open(self.args.weights, 'rb') as f: # Mở file pkl nên dùng chế độ 'rb'
                     weights = pickle.load(f)
             else:
-                weights = torch.load(self.args.weights, map_location=self.device)
+                weights = torch.load(self.args.weights, map_location=self.device, weights_only=False)
 
             # Support both plain state_dict files and full training checkpoints.
             if isinstance(weights, dict) and 'model_state_dict' in weights:
@@ -391,7 +391,7 @@ class Processor():
             raise FileNotFoundError('Resume checkpoint not found: {}'.format(ckpt_path))
 
         self.print_log('Resume training from checkpoint: {}'.format(ckpt_path))
-        ckpt = torch.load(ckpt_path, map_location=self.device)
+        ckpt = torch.load(ckpt_path, map_location=self.device, weights_only=False)
 
         if not isinstance(ckpt, dict) or 'model_state_dict' not in ckpt:
             raise ValueError('Invalid resume checkpoint format: {}'.format(ckpt_path))
