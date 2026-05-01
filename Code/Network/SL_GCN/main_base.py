@@ -63,6 +63,30 @@ def init_seed(_):
     torch.backends.cudnn.benchmark = False
 
 
+def collate_batch_with_index(batch):
+    """
+    Custom collate function to handle data, label, and index.
+    Converts data and label to tensors, but keeps index as a list.
+    This prevents the TypeError when index contains non-numeric values.
+    """
+    data_list = []
+    label_list = []
+    index_list = []
+    
+    for item in batch:
+        data, label, index = item
+        data_list.append(torch.from_numpy(data))
+        label_list.append(label)
+        index_list.append(index)
+    
+    # Stack data and label into tensors
+    batch_data = torch.stack(data_list, dim=0)
+    batch_label = torch.tensor(label_list)
+    
+    # Return index as a list (not converted to tensor)
+    return batch_data, batch_label, index_list
+
+
 class Processor():
     """ 
         Processor for Skeleton-based Action Recgnition
@@ -198,6 +222,7 @@ class Processor():
             shuffle=True,
             num_workers=self.args.num_worker,
             drop_last=True,
+            collate_fn=collate_batch_with_index,
             worker_init_fn=init_seed)
         self.data_loader['val'] = torch.utils.data.DataLoader(
             dataset=Feeder(**self.args.val_feeder_args),
@@ -205,6 +230,7 @@ class Processor():
             shuffle=False,
             num_workers=self.args.num_worker,
             drop_last=False,
+            collate_fn=collate_batch_with_index,
             worker_init_fn=init_seed)
         # else:
         self.data_loader['test'] = torch.utils.data.DataLoader(
@@ -213,6 +239,7 @@ class Processor():
             shuffle=False,
             num_workers=self.args.num_worker,
             drop_last=False,
+            collate_fn=collate_batch_with_index,
             worker_init_fn=init_seed)
     def load_model(self):
         # 1. Xác định thiết bị (CPU hoặc GPU)
