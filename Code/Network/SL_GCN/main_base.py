@@ -67,7 +67,7 @@ def collate_batch_with_index(batch):
     """
     Custom collate function to handle data, label, and index.
     Converts data and label to tensors, but keeps index as a list.
-    This prevents the TypeError when index contains non-numeric values or string labels.
+    Handles edge cases like empty string labels.
     """
     data_list = []
     label_list = []
@@ -76,8 +76,19 @@ def collate_batch_with_index(batch):
     for item in batch:
         data, label, index = item
         data_list.append(torch.from_numpy(data))
-        # Convert label to int in case it's a string
-        label_list.append(int(label))
+        
+        # Convert label to int, handling edge cases
+        try:
+            if isinstance(label, str) and label.strip() == '':
+                # Skip empty string labels or assign default (0)
+                label_int = 0
+            else:
+                label_int = int(label)
+        except (ValueError, TypeError) as e:
+            print(f"Warning: Invalid label '{label}' at index {index}, assigning 0")
+            label_int = 0
+            
+        label_list.append(label_int)
         index_list.append(index)
     
     # Stack data and label into tensors
