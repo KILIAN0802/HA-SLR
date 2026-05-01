@@ -51,9 +51,8 @@ class DropBlock_Ske(nn.Module):
             gamma = (1. - self.keep_prob) / (1 + 1.92)
         elif self.num_point == 20:  # Kinect V1
             gamma = (1. - self.keep_prob) / (1 + 1.9)
-        else:   # maybe 27
-            gamma = (1. - self.keep_prob) / (1 + 1.92)   # gamma： 找到删除哪些点的系数 gamma值极小
-            warnings.warn('undefined skeleton graph')
+        else:   # 27 keypoints (sign language) or other custom skeletons
+            gamma = (1. - self.keep_prob) / (1 + 1.92)
             
         # torch.clamp 将大于max的 置为1        
         # torch.bernoulli: 从伯努利分布中提取二进制随机数（`0或1`），即 mask to drop
