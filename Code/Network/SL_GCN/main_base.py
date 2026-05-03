@@ -675,91 +675,114 @@ class Processor():
 
         return validation_loss, accuracy
 
+    def _prepare_run_for_name(self, run_name):
+        """Prepare directories and args for a single named run."""
+        # update wandb run name
+        self.args.wandb_run_name = run_name
+
+        # create a unique work_dir per run name (append timestamp)
+        ts = int(time.time())
+        base_name = f"{self.args.Experiment_name}_{run_name}_{ts}"
+        self.args.work_dir = os.path.join("./work_dir", base_name)
+
+        # update dirs
+        self.model_saved_dir = os.path.join(self.args.work_dir, "checkpoints")
+        self.sum_dir = os.path.join(self.args.work_dir, "runs")
+        self.score_dir = os.path.join(self.args.work_dir, "scores")
+        self.args.model_saved_name = os.path.join(self.model_saved_dir, os.path.basename(self.args.Experiment_name))
+        # reset run-specific metrics/state
+        self.global_step = 0
+        self.lr = self.args.base_lr
+        self.best_acc = 0
+        self.best_acc_epoch = 0
+        self.best_loss = 1e6
+        self.best_loss_epoch = 0
+        self.latest_ckpt_path = ''
+        self.wandb_run = None
+        self._wandb_enabled = False
+
+    def _execute_training_run(self):
+        """Execute training for current self.args/work_dir setup."""
+        self.mk_dir()
+        self.setup_wandb()
+
+        self.load_model()
+        self.load_optimizer()
+        self.maybe_resume_training()
+        self.load_data()
+        self.save_arg()
+
+        self.eval_pkl = os.path.join(self.score_dir, "{}_best_acc_score.pkl".format(os.path.basename(self.args.Experiment_name)))
+
+        best_acc_ckpt = '{}_best_acc.pt'.format(self.args.model_saved_name)
+        best_loss_ckpt = '{}_best_loss.pt'.format(self.args.model_saved_name)
+        self.latest_ckpt_path = '{}_latest.pt'.format(self.args.model_saved_name)
+
+        self.global_step = self.args.start_epoch * len(self.data_loader['train']) / self.args.batch_size
+
+        if self.args.es:
+            early_stopping = EarlyStopping(patience=self.args.es_patience)
+
+        for epoch in range(self.args.start_epoch, self.args.num_epoch):
+            save_model = ((epoch + 1) % self.args.save_interval == 0) or (epoch + 1 == self.args.num_epoch)
+
+            weights = self.train(epoch, save_model=save_model)
+
+            val_loss, accuracy = self.eval(epoch, loader_name=['val'])
+
+            if accuracy == self.best_acc:
+                torch.save(weights, best_acc_ckpt)
+
+            if self.best_loss > val_loss:
+                self.best_loss = val_loss
+                self.best_loss_epoch = epoch
+                torch.save(weights, best_loss_ckpt)
+
+            self.save_latest_checkpoint(epoch, val_loss, accuracy)
+
+            if self.args.es:
+                early_stopping(val_loss)
+                if early_stopping.early_stop:
+                    self.print_log("Early stopping")
+                    break
+
+        best_acc_ckpt_final = "{}_best_acc_{}_{}.pt".format(self.args.model_saved_name, str(self.best_acc_epoch), str(self.best_acc)[2:6])
+        best_loss_ckpt_final = "{}_best_loss_{}_{}.pt".format(self.args.model_saved_name, str(self.best_loss_epoch), str(self.best_loss)[2:6])
+        if os.path.exists(best_acc_ckpt):
+            os.rename(src=best_acc_ckpt, dst=best_acc_ckpt_final)
+        if os.path.exists(best_loss_ckpt):
+            os.rename(src=best_loss_ckpt, dst=best_loss_ckpt_final)
+
+        self.log_wandb_artifact(self.latest_ckpt_path, '{}_latest'.format(os.path.basename(self.args.Experiment_name)), artifact_type='checkpoint')
+        self.log_wandb_artifact(best_acc_ckpt_final, '{}_best_acc'.format(os.path.basename(self.args.Experiment_name)), artifact_type='checkpoint')
+        self.log_wandb_artifact(best_loss_ckpt_final, '{}_best_loss'.format(os.path.basename(self.args.Experiment_name)), artifact_type='checkpoint')
+
+        self.print_log('\n')
+        self.print_log('model_name: {}'.format(self.args.Experiment_name))
+        self.print_log('best accuracy: {}'.format(self.best_acc))
+        self.print_log('best accuracy_epoch: {}'.format(best_acc_ckpt_final))
+        self.print_log('best loss: {}'.format(self.best_loss))
+        self.print_log('best loss_epoch: {}'.format(best_loss_ckpt_final))
+        self.log_wandb({
+            'best/accuracy': float(self.best_acc),
+            'best/accuracy_epoch': int(self.best_acc_epoch),
+            'best/loss': float(self.best_loss),
+            'best/loss_epoch': int(self.best_loss_epoch),
+        })
+        self.finish_wandb()
+
     def start(self):
         if self.args.phase.lower() == 'train':
 
-            self.mk_dir()   # 放在save_arg\load_model 前面
-            self.setup_wandb()
+            run_names = getattr(self.args, 'run_names', []) or []
 
-            self.load_model()   # train_finetune时 会加载权重...
-            self.load_optimizer()
-            self.maybe_resume_training()
-            self.load_data()
-            
-            self.save_arg()  # 不放在init中， 避免 test phase 测试时 产生无效文件
-
-            self.eval_pkl = os.path.join(self.score_dir, "{}_best_acc_score.pkl".format(os.path.basename(self.args.Experiment_name)))
-
-            best_acc_ckpt = '{}_best_acc.pt'.format(self.args.model_saved_name) 
-            best_loss_ckpt = '{}_best_loss.pt'.format(self.args.model_saved_name) 
-            self.latest_ckpt_path = '{}_latest.pt'.format(self.args.model_saved_name)
-
-            # self.print_log('Parameters:\n{}\n'.format(str(vars(self.args))))  # see work_dir/xxx/config.yaml
-            self.global_step = self.args.start_epoch * \
-                len(self.data_loader['train']) / self.args.batch_size
-            
-            # initialize the early_stopping object
-            if self.args.es:
-                early_stopping = EarlyStopping(patience=self.args.es_patience)
-
-            for epoch in range(self.args.start_epoch, self.args.num_epoch):
-                save_model = ((epoch + 1) % self.args.save_interval == 0) or (
-                    epoch + 1 == self.args.num_epoch)
-
-                weights = self.train(epoch, save_model=save_model)
-
-                val_loss, accuracy = self.eval(epoch, loader_name=['val']) 
-
-                if accuracy == self.best_acc:
-                    torch.save(weights, best_acc_ckpt)
-
-                if self.best_loss > val_loss:
-                    self.best_loss  = val_loss
-                    self.best_loss_epoch = epoch
-
-                    # torch.save(weights, self.args.model_saved_name + '-' + str(epoch) + '-' + str(val_loss)  + '.pt')
-                    torch.save(weights, best_loss_ckpt)
-                    print(val_loss)
-
-                self.save_latest_checkpoint(epoch, val_loss, accuracy)
-
-
-                # self.lr_scheduler.step(val_loss)
-
-                # early_stopping needs the validation loss to check if it has decresed, 
-                # and if it has, it will make a checkpoint of the current model
-
-                if self.args.es:
-                    early_stopping(val_loss)
-                
-                    if early_stopping.early_stop:
-                        self.print_log("Early stopping")
-                        break
-
-            best_acc_ckpt_final = "{}_best_acc_{}_{}.pt".format(self.args.model_saved_name, str(self.best_acc_epoch), str(self.best_acc)[2:6])
-            best_loss_ckpt_final = "{}_best_loss_{}_{}.pt".format(self.args.model_saved_name, str(self.best_loss_epoch), str(self.best_loss)[2:6])
-            if os.path.exists(best_acc_ckpt):
-                os.rename(src=best_acc_ckpt, dst=best_acc_ckpt_final)
-            if os.path.exists(best_loss_ckpt):
-                os.rename(src=best_loss_ckpt, dst=best_loss_ckpt_final)
-
-            self.log_wandb_artifact(self.latest_ckpt_path, '{}_latest'.format(os.path.basename(self.args.Experiment_name)), artifact_type='checkpoint')
-            self.log_wandb_artifact(best_acc_ckpt_final, '{}_best_acc'.format(os.path.basename(self.args.Experiment_name)), artifact_type='checkpoint')
-            self.log_wandb_artifact(best_loss_ckpt_final, '{}_best_loss'.format(os.path.basename(self.args.Experiment_name)), artifact_type='checkpoint')
-
-            self.print_log('\n')
-            self.print_log('model_name: {}'.format(self.args.Experiment_name))
-            self.print_log('best accuracy: {}'.format(self.best_acc))
-            self.print_log('best accuracy_epoch: {}'.format(best_acc_ckpt_final))
-            self.print_log('best loss: {}'.format(self.best_loss))
-            self.print_log('best loss_epoch: {}'.format(best_loss_ckpt_final))
-            self.log_wandb({
-                'best/accuracy': float(self.best_acc),
-                'best/accuracy_epoch': int(self.best_acc_epoch),
-                'best/loss': float(self.best_loss),
-                'best/loss_epoch': int(self.best_loss_epoch),
-            })
-            self.finish_wandb()
+            # If run names provided, execute sequential runs; otherwise run once using existing args
+            if run_names:
+                for rn in run_names:
+                    self._prepare_run_for_name(rn)
+                    self._execute_training_run()
+            else:
+                self._execute_training_run()
 
         elif self.args.phase.lower() == 'test':
 

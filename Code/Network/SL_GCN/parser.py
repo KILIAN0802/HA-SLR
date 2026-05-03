@@ -175,4 +175,9 @@ def get_parser():
     parser.add_argument('--wandb-mode', type=str, default='online', help='online, offline, or disabled')
     parser.add_argument('--wandb-id', type=str, default='')
     parser.add_argument('--wandb-resume', type=str, default='auto')
+    parser.add_argument(
+        '--run-names',
+        nargs='+',
+        default=[],
+        help='optional list of run names to execute sequentially (overrides single run name)')
     return parser

@@ -1,3 +1,4 @@
+import argparse
 import os
 import re
 import random
@@ -12,6 +13,15 @@ ROOT = os.path.dirname(__file__)
 FILES_DIR = os.path.normpath(os.path.join(ROOT, '..', 'data', 'MultiVSL200'))
 OUT_DIR = os.path.join(FILES_DIR, 'splits')
 SEED = 42
+
+# CLI: allow custom signer counts (useful to set train/val/test signer counts)
+parser = argparse.ArgumentParser(description='Create signer-based splits for MultiVSL200')
+parser.add_argument('--train-signers', type=int, default=None, help='Number of signers for train split')
+parser.add_argument('--val-signers', type=int, default=None, help='Number of signers for val split')
+parser.add_argument('--test-signers', type=int, default=None, help='Number of signers for test split')
+parser.add_argument('--seed', type=int, default=SEED, help='Random seed for signer shuffling')
+args = parser.parse_args()
+SEED = args.seed
 
 os.makedirs(OUT_DIR, exist_ok=True)
 
@@ -31,16 +41,31 @@ signers = sorted(signer_map.keys(), key=lambda s: int(s))
 random.Random(SEED).shuffle(signers)
 
 n = len(signers)
-# allocate 80/10/10 by signers using rounding to get balanced small counts
-n_train = round(n * 0.8)
-n_val = round(n * 0.1)
-n_test = n - n_train - n_val
 
-# correct for edge cases if rounding pushed counts out of bounds
-if n_test < 0:
-    n_test = 0
-if n_train < 0:
-    n_train = max(0, n - n_val - n_test)
+# If user provided explicit signer counts, use them (with basic validation)
+if args.train_signers is not None or args.val_signers is not None or args.test_signers is not None:
+    # default to 0 for unspecified counts
+    t = args.train_signers if args.train_signers is not None else 0
+    v = args.val_signers if args.val_signers is not None else 0
+    te = args.test_signers if args.test_signers is not None else 0
+    if t + v + te != n:
+        print(f"Warning: requested signer counts sum {t+v+te} != total signers {n}.")
+        print("Adjusting by giving remainder to train split.")
+        # give leftover to train
+        leftover = n - (t + v + te)
+        t = max(0, t + leftover)
+    n_train, n_val, n_test = t, v, te
+else:
+    # allocate 80/10/10 by signers using rounding to get balanced small counts
+    n_train = round(n * 0.8)
+    n_val = round(n * 0.1)
+    n_test = n - n_train - n_val
+
+    # correct for edge cases if rounding pushed counts out of bounds
+    if n_test < 0:
+        n_test = 0
+    if n_train < 0:
+        n_train = max(0, n - n_val - n_test)
 
 train_signers = signers[:n_train]
 val_signers = signers[n_train:n_train+n_val]
