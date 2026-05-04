@@ -19,13 +19,13 @@ with open('./data/MultiVSL200_27/test_label.pkl', 'rb') as f:
 label = np.array([sample_names, labels])
 
 
-r1 = open('../work_dir/MultiVSL200/Joint/multivsl200_joint_27_cvpr_hand_aware_sl_lgcn_baseline/bs64_f100_lr1e-08_trainlr0.1_warmup20_test/2026-05-04_07-04-02/scores/multivsl200_joint_27_cvpr_hand_aware_sl_lgcn_baseline_best_acc_test_score.pkl', 'rb')
+r1 = open('./work_dir/MultiVSL200/Joint/multivsl200_joint_27_cvpr_hand_aware_sl_lgcn_baseline/bs64_f100_lr1e-08_trainlr0.1_warmup20_test/2026-05-04_07-04-02/scores/multivsl200_joint_27_cvpr_hand_aware_sl_lgcn_baseline_best_acc_test_score.pkl', 'rb')
 r1 = list(pickle.load(r1).items())
-r2 = open('../work_dir/MultiVSL200/Bone/multivsl200_bone_27_cvpr_hand_aware_sl_lgcn_baseline/bs64_f100_lr1e-08_trainlr0.1_warmup20_test/2026-05-04_07-06-42/scores/multivsl200_bone_27_cvpr_hand_aware_sl_lgcn_baseline_best_acc_test_score.pkl', 'rb')
+r2 = open('./work_dir/MultiVSL200/Bone/multivsl200_bone_27_cvpr_hand_aware_sl_lgcn_baseline/bs64_f100_lr1e-08_trainlr0.1_warmup20_test/2026-05-04_07-06-42/scores/multivsl200_bone_27_cvpr_hand_aware_sl_lgcn_baseline_best_acc_test_score.pkl', 'rb')
 r2 = list(pickle.load(r2).items())
-r3 = open('../work_dir/MultiVSL200/Joint-Motion/multivsl200_joint_motion_27_cvpr_hand_aware_sl_lgcn_baseline/bs64_f100_lr1e-08_trainlr0.1_warmup20_test/2026-05-04_07-08-21/scores/multivsl200_joint_motion_27_cvpr_hand_aware_sl_lgcn_baseline_best_acc_test_score.pkl', 'rb')
+r3 = open('./work_dir/MultiVSL200/Joint-Motion/multivsl200_joint_motion_27_cvpr_hand_aware_sl_lgcn_baseline/bs64_f100_lr1e-08_trainlr0.1_warmup20_test/2026-05-04_07-08-21/scores/multivsl200_joint_motion_27_cvpr_hand_aware_sl_lgcn_baseline_best_acc_test_score.pkl', 'rb')
 r3 = list(pickle.load(r3).items())
-r4 = open('../work_dir/MultiVSL200/Bone-Motion/multivsl200_bone_motion_27_cvpr_hand_aware_sl_lgcn_baseline/bs64_f100_lr1e-08_trainlr0.1_warmup20_test/2026-05-04_07-10-07/scores/multivsl200_bone_motion_27_cvpr_hand_aware_sl_lgcn_baseline_best_acc_test_score.pkl', 'rb')
+r4 = open('./work_dir/MultiVSL200/Bone-Motion/multivsl200_bone_motion_27_cvpr_hand_aware_sl_lgcn_baseline/bs64_f100_lr1e-08_trainlr0.1_warmup20_test/2026-05-04_07-10-07/scores/multivsl200_bone_motion_27_cvpr_hand_aware_sl_lgcn_baseline_best_acc_test_score.pkl', 'rb')
 r4 = list(pickle.load(r4).items())
 
 alpha = [1.0,0.9,0.5,0.5] # used in submission 1  # ensemble 权重
