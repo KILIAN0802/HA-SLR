@@ -253,6 +253,36 @@ class Processor():
             drop_last=False,
             collate_fn=collate_batch_with_index,
             worker_init_fn=init_seed)
+        # CHỈ load tập test nếu đang ở phase test
+        if self.args.phase.lower() == 'test':
+            self.data_loader['test'] = torch.utils.data.DataLoader(
+                dataset=Feeder(**self.args.test_feeder_args),
+                batch_size=self.args.test_batch_size,
+                shuffle=False,
+                num_workers=self.args.num_worker,
+                drop_last=False,
+                collate_fn=collate_batch_with_index,
+                worker_init_fn=init_seed)
+        else:
+            # Load train và val khi training
+            self.data_loader['train'] = torch.utils.data.DataLoader(
+                dataset=Feeder(**self.args.train_feeder_args),
+                batch_size=self.args.batch_size,
+                shuffle=True,
+                num_workers=self.args.num_worker,
+                drop_last=True,
+                collate_fn=collate_batch_with_index,
+                worker_init_fn=init_seed)
+            self.data_loader['val'] = torch.utils.data.DataLoader(
+                dataset=Feeder(**self.args.val_feeder_args),
+                batch_size=self.args.test_batch_size,
+                shuffle=False,
+                num_workers=self.args.num_worker,
+                drop_last=False,
+                collate_fn=collate_batch_with_index,
+                worker_init_fn=init_seed)
+
+
     def load_model(self):
         # 1. Xác định thiết bị (CPU hoặc GPU)
         use_cuda = torch.cuda.is_available()
