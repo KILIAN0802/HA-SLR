@@ -16,7 +16,7 @@ top5:  0.9975948690539819
 """
 
 # label = open('./test_labels_pseudo.pkl', 'rb')
-label = open('./test_label.pkl', 'rb')
+label = open('./data/MultiVSL200_27/test_label.pkl', 'rb')
 label = np.array(pickle.load(label))
 
 r1 = open('../work_dir/MultiVSL200/Joint/multivsl200_joint_27_cvpr_hand_aware_sl_lgcn_baseline/bs64_f100_lr1e-08_trainlr0.1_warmup20_test/2026-05-04_07-04-02/scores/multivsl200_joint_27_cvpr_hand_aware_sl_lgcn_baseline_best_acc_test_score.pkl', 'rb')
