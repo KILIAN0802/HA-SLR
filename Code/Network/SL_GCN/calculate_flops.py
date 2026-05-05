@@ -24,7 +24,7 @@ def calculate_metrics_for_model():
         num_class=200,          # Số lớp của bộ dữ liệu (ví dụ: 200 cho MultiVSL200)
         num_point=46,           # Số lượng keypoint
         num_person=1,           # Số người trong mỗi video
-        graph='graph.sign_27_A_hands', # SỬA LỖI: Truyền đường dẫn dưới dạng string
+        graph='graph.sign_27_A_hands.Graph', # SỬA LỖI: Truyền đường dẫn dưới dạng string
         in_channels=3           # Số kênh đầu vào: 3 cho (x, y, confidence)
     )
     
