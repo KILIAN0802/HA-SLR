@@ -60,7 +60,7 @@ def ensemble_with_alpha(scores_list, labels, alpha):
 
 
 def main():
-    labels_path = './data/MultiVSL200_27/val_label.pkl'
+    labels_path = './../data/MultiVSL200_27/val_label.pkl'
     score_paths = [
         './work_dir/MultiVSL200/Joint/multivsl200_joint_27_cvpr_hand_aware_sl_lgcn_baseline/bs64_f100_lr1e-08_trainlr0.1_warmup20_test/2026-05-04_07-04-02/scores/multivsl200_joint_27_cvpr_hand_aware_sl_lgcn_baseline_best_acc_test_score.pkl',
         './work_dir/MultiVSL200/Bone/multivsl200_bone_27_cvpr_hand_aware_sl_lgcn_baseline/bs64_f100_lr1e-08_trainlr0.1_warmup20_test/2026-05-04_07-06-42/scores/multivsl200_bone_27_cvpr_hand_aware_sl_lgcn_baseline_best_acc_test_score.pkl',
