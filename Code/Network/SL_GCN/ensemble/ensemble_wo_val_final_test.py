@@ -37,6 +37,8 @@ r4 = list(pickle.load(r4).items())
 # top5:  0.8988195615514334
 
 alpha = [0.5, 1.0, 0.6, 0.8] # used in submission 3  # ensemble 权重
+# top1:  0.7824620573355818
+# top5:  0.9005059021922428
 
 
 right_num = total_num = right_num_5 = 0
