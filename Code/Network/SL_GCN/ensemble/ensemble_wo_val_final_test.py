@@ -28,7 +28,8 @@ r3 = list(pickle.load(r3).items())
 r4 = open('./work_dir/MultiVSL200/Bone-Motion/multivsl200_bone_motion_27_cvpr_hand_aware_sl_lgcn_baseline/bs64_f100_lr1e-08_trainlr0.1_warmup20_test/2026-05-04_07-10-07/scores/multivsl200_bone_motion_27_cvpr_hand_aware_sl_lgcn_baseline_best_acc_test_score.pkl', 'rb')
 r4 = list(pickle.load(r4).items())
 
-alpha = [1.0,0.9,0.5,0.5] # used in submission 1  # ensemble 权重
+# alpha = [1.0,0.9,0.5,0.5] # used in submission 1  # ensemble 权重
+alpha = [0.5,1.0,0.65,0.9] # used in submission 2  # ensemble 权重
 
 right_num = total_num = right_num_5 = 0
 names = []
