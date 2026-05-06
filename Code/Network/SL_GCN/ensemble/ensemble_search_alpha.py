@@ -9,54 +9,62 @@ import pickle
 import os
 import numpy as np
 
-
 def load_scores(path_list):
-    """Load 4 score pkl files."""
+    """Load 4 score pkl files as dictionaries."""
     scores_list = []
     for i, path in enumerate(path_list):
-        if path is None:
-            print(f"[ERROR] Path {i} is None")
-            return None
         if not os.path.exists(path):
             print(f"[ERROR] File not found: {path}")
             return None
         print(f"Loading score {i+1}/4: {path}")
         with open(path, 'rb') as f:
-            scores = list(pickle.load(f).items())
+            # GIỮ NGUYÊN dạng DICTIONARY để lookup theo tên
+            scores = pickle.load(f)
             scores_list.append(scores)
     return scores_list
 
 
 def ensemble_with_alpha(scores_list, labels, alpha):
-    """Tính top1/top5 với bộ alpha cụ thể."""
+    """Tính top1/top5 bằng cách khớp tên mẫu."""
     n_samples = len(labels[0])
     right_num = 0
     right_num_5 = 0
+    actual_samples = 0
     
     for i in range(n_samples):
-        # Extract sample name and true label
-        name, true_label = labels[:, i]
+        name, true_label = labels[0][i], labels[1][i]
         
-        # Extract scores from 4 streams
-        _, s1 = scores_list[0][i]
-        _, s2 = scores_list[1][i]
-        _, s3 = scores_list[2][i]
-        _, s4 = scores_list[3][i]
-        
-        # Weighted ensemble
-        score = (s1*alpha[0] + s2*alpha[1] + s3*alpha[2] + s4*alpha[3]) / np.array(alpha).sum()
-        
-        # Top1 accuracy
-        pred = np.argmax(score)
-        right_num += int(pred == int(true_label))
-        
-        # Top5 accuracy
-        rank_5 = score.argsort()[-5:]
-        right_num_5 += int(int(true_label) in rank_5)
+        # Kiểm tra xem mẫu này có tồn tại trong TẤT CẢ các file score không
+        if all(name in scores for scores in scores_list):
+            s1 = scores_list[0][name]
+            s2 = scores_list[1][name]
+            s3 = scores_list[2][name]
+            s4 = scores_list[3][name]
+            
+            actual_samples += 1
+            
+            # Tính điểm trung bình có trọng số
+            score = (s1*alpha[0] + s2*alpha[1] + s3*alpha[2] + s4*alpha[3]) / np.array(alpha).sum()
+            
+            # Dự đoán
+            pred = np.argmax(score)
+            right_num += int(pred == int(true_label))
+            
+            # Top5
+            rank_5 = score.argsort()[-5:]
+            right_num_5 += int(int(true_label) in rank_5)
     
-    top1 = right_num / n_samples
-    top5 = right_num_5 / n_samples
+    if actual_samples == 0:
+        return 0, 0
+        
+    top1 = right_num / actual_samples
+    top5 = right_num_5 / actual_samples
     return top1, top5
+
+
+
+
+
 
 
 def main():
