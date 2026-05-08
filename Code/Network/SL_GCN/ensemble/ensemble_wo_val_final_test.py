@@ -29,7 +29,7 @@ class FusionWeights(nn.Module):
 
 # --- 1. Load Data ---
 # Load labels
-label_path = '../data/MultiVSL200_27/test_label.pkl'
+label_path = './../data/MultiVSL200_27/test_label.pkl'
 with open(label_path, 'rb') as f:
     # label format: (names, labels)
     names, labels_list = pickle.load(f)
@@ -37,10 +37,10 @@ labels = torch.LongTensor(np.array(labels_list, dtype=int))
 
 # Load scores from 4 streams
 score_paths = [
-    '../work_dir/MultiVSL200/Joint/multivsl200_joint_27_cvpr_hand_aware_sl_lgcn_baseline/bs64_f100_lr1e-08_trainlr0.1_warmup20_test/2026-05-04_07-04-02/scores/multivsl200_joint_27_cvpr_hand_aware_sl_lgcn_baseline_best_acc_test_score.pkl',
-    '../work_dir/MultiVSL200/Bone/multivsl200_bone_27_cvpr_hand_aware_sl_lgcn_baseline/bs64_f100_lr1e-08_trainlr0.1_warmup20_test/2026-05-04_07-06-42/scores/multivsl200_bone_27_cvpr_hand_aware_sl_lgcn_baseline_best_acc_test_score.pkl',
-    '../work_dir/MultiVSL200/Joint-Motion/multivsl200_joint_motion_27_cvpr_hand_aware_sl_lgcn_baseline/bs64_f100_lr1e-08_trainlr0.1_warmup20_test/2026-05-04_07-08-21/scores/multivsl200_joint_motion_27_cvpr_hand_aware_sl_lgcn_baseline_best_acc_test_score.pkl',
-    '../work_dir/MultiVSL200/Bone-Motion/multivsl200_bone_motion_27_cvpr_hand_aware_sl_lgcn_baseline/bs64_f100_lr1e-08_trainlr0.1_warmup20_test/2026-05-04_07-10-07/scores/multivsl20₀_bone_motion_27_cvpr_hand_aware_sl_lgcn_baseline_best_acc_test_score.pkl'
+    './../work_dir/MultiVSL200/Joint/multivsl200_joint_27_cvpr_hand_aware_sl_lgcn_baseline/bs64_f100_lr1e-08_trainlr0.1_warmup20_test/2026-05-04_07-04-02/scores/multivsl200_joint_27_cvpr_hand_aware_sl_lgcn_baseline_best_acc_test_score.pkl',
+    './../work_dir/MultiVSL200/Bone/multivsl200_bone_27_cvpr_hand_aware_sl_lgcn_baseline/bs64_f100_lr1e-08_trainlr0.1_warmup20_test/2026-05-04_07-06-42/scores/multivsl200_bone_27_cvpr_hand_aware_sl_lgcn_baseline_best_acc_test_score.pkl',
+    './../work_dir/MultiVSL200/Joint-Motion/multivsl200_joint_motion_27_cvpr_hand_aware_sl_lgcn_baseline/bs64_f100_lr1e-08_trainlr0.1_warmup20_test/2026-05-04_07-08-21/scores/multivsl200_joint_motion_27_cvpr_hand_aware_sl_lgcn_baseline_best_acc_test_score.pkl',
+    './../work_dir/MultiVSL200/Bone-Motion/multivsl200_bone_motion_27_cvpr_hand_aware_sl_lgcn_baseline/bs64_f100_lr1e-08_trainlr0.1_warmup20_test/2026-05-04_07-10-07/scores/multivsl200_bone_motion_27_cvpr_hand_aware_sl_lgcn_baseline_best_acc_test_score.pkl'
 ]
 
 all_scores = []
