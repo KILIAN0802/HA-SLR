@@ -1,92 +1,122 @@
 import argparse
 import pickle
-
 import numpy as np
 from tqdm import tqdm
-import pdb
+import torch
+import torch.nn as nn
+import torch.optim as optim
 
+# Define a learnable layer for fusion weights
+class FusionWeights(nn.Module):
+    def __init__(self):
+        super().__init__()
+        # Initialize weights as a learnable parameter, starting with average fusion
+        self.weights = nn.Parameter(torch.ones(4))
 
-"""
+    def forward(self, scores):
+        # Using softmax to make them sum to 1, which is a common practice
+        normalized_weights = torch.nn.functional.softmax(self.weights, dim=0)
+        
+        # scores is a list of 4 tensors [ (N, C), (N, C), (N, C), (N, C) ]
+        # Stack scores into a single tensor: [4, N, C]
+        stacked_scores = torch.stack(scores, dim=0)
+        
+        # Perform weighted sum
+        # Reshape weights for broadcasting: [4, 1, 1]
+        # (4, 1, 1) * (4, N, C) -> (4, N, C) -> sum over dim 0 -> (N, C)
+        ensembled_score = (normalized_weights.view(4, 1, 1) * stacked_scores).sum(dim=0)
+        return ensembled_score, normalized_weights
 
-$ python ensemble_wo_val_final_test.py
-100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 3742/3742 [00:00<00:00, 15775.07it/s]
-3742
-top1:  0.9647247461250668
-top5:  0.9975948690539819
-"""
+# --- 1. Load Data ---
+# Load labels
+label_path = './data/MultiVSL200_27/test_label.pkl'
+with open(label_path, 'rb') as f:
+    # label format: (names, labels)
+    names, labels_list = pickle.load(f)
+labels = torch.LongTensor(np.array(labels_list, dtype=int))
 
-# label = open('./test_labels_pseudo.pkl', 'rb')
-label = open('./data/MultiVSL200_27/test_label.pkl', 'rb')
-label = np.array(pickle.load(label))
+# Load scores from 4 streams
+score_paths = [
+    './work_dir/MultiVSL200/Joint/multivsl200_joint_27_cvpr_hand_aware_sl_lgcn_baseline/bs64_f100_lr1e-08_trainlr0.1_warmup20_test/2026-05-04_07-04-02/scores/multivsl200_joint_27_cvpr_hand_aware_sl_lgcn_baseline_best_acc_test_score.pkl',
+    './work_dir/MultiVSL200/Bone/multivsl200_bone_27_cvpr_hand_aware_sl_lgcn_baseline/bs64_f100_lr1e-08_trainlr0.1_warmup20_test/2026-05-04_07-06-42/scores/multivsl200_bone_27_cvpr_hand_aware_sl_lgcn_baseline_best_acc_test_score.pkl',
+    './work_dir/MultiVSL200/Joint-Motion/multivsl200_joint_motion_27_cvpr_hand_aware_sl_lgcn_baseline/bs64_f100_lr1e-08_trainlr0.1_warmup20_test/2026-05-04_07-08-21/scores/multivsl200_joint_motion_27_cvpr_hand_aware_sl_lgcn_baseline_best_acc_test_score.pkl',
+    './work_dir/MultiVSL200/Bone-Motion/multivsl200_bone_motion_27_cvpr_hand_aware_sl_lgcn_baseline/bs64_f100_lr1e-08_trainlr0.1_warmup20_test/2026-05-04_07-10-07/scores/multivsl200_bone_motion_27_cvpr_hand_aware_sl_lgcn_baseline_best_acc_test_score.pkl'
+]
 
-r1 = open('./work_dir/MultiVSL200/Joint/multivsl200_joint_27_cvpr_hand_aware_sl_lgcn_baseline/bs64_f100_lr1e-08_trainlr0.1_warmup20_test/2026-05-04_07-04-02/scores/multivsl200_joint_27_cvpr_hand_aware_sl_lgcn_baseline_best_acc_test_score.pkl', 'rb')
-r1 = list(pickle.load(r1).items())
-r2 = open('./work_dir/MultiVSL200/Bone/multivsl200_bone_27_cvpr_hand_aware_sl_lgcn_baseline/bs64_f100_lr1e-08_trainlr0.1_warmup20_test/2026-05-04_07-06-42/scores/multivsl200_bone_27_cvpr_hand_aware_sl_lgcn_baseline_best_acc_test_score.pkl', 'rb')
-r2 = list(pickle.load(r2).items())
-r3 = open('./work_dir/MultiVSL200/Joint-Motion/multivsl200_joint_motion_27_cvpr_hand_aware_sl_lgcn_baseline/bs64_f100_lr1e-08_trainlr0.1_warmup20_test/2026-05-04_07-08-21/scores/multivsl200_joint_motion_27_cvpr_hand_aware_sl_lgcn_baseline_best_acc_test_score.pkl', 'rb')
-r3 = list(pickle.load(r3).items())
-r4 = open('./work_dir/MultiVSL200/Bone-Motion/multivsl200_bone_motion_27_cvpr_hand_aware_sl_lgcn_baseline/bs64_f100_lr1e-08_trainlr0.1_warmup20_test/2026-05-04_07-10-07/scores/multivsl200_bone_motion_27_cvpr_hand_aware_sl_lgcn_baseline_best_acc_test_score.pkl', 'rb')
-r4 = list(pickle.load(r4).items())
+all_scores = []
+print("Loading scores...")
+for p in tqdm(score_paths):
+    with open(p, 'rb') as f:
+        # Sort by name to ensure order is correct
+        scores_dict = dict(pickle.load(f).items())
+        ordered_scores = [scores_dict[name] for name in names]
+        all_scores.append(torch.from_numpy(np.array(ordered_scores)))
 
-# alpha = [1.0,0.9,0.5,0.5] # used in submission 1  # ensemble 权重
-# top1:  0.7504
-# top5:  0.8971
+# --- 2. Setup for Training ---
+fusion_model = FusionWeights()
+optimizer = optim.Adam(fusion_model.parameters(), lr=0.01)
+criterion = nn.CrossEntropyLoss()
+num_epochs = 100
 
-# alpha = [0.5,1.0,0.65,0.9] # used in submission 2  # ensemble 权重
-# top1:  0.7807757166947723
-# top5:  0.8988195615514334
+print("\nInitial weights (before normalization):", fusion_model.weights.data.numpy())
+print("--- Starting Training ---")
 
-alpha = [0.5, 1.0, 0.6, 0.8] # used in submission 3  # ensemble 权重
-# top1:  0.7824620573355818
-# top5:  0.9005059021922428
+# --- 3. Training Loop ---
+for epoch in tqdm(range(num_epochs), desc="Training Weights"):
+    optimizer.zero_grad()
+    
+    # Get final prediction by ensembling
+    final_score, normalized_weights = fusion_model(all_scores)
+    
+    # Calculate loss
+    loss = criterion(final_score, labels)
+    
+    # Backpropagation
+    loss.backward()
+    optimizer.step()
+    
+    # if (epoch + 1) % 10 == 0:
+    #     print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
 
+# --- 4. Evaluation and Verification ---
+print("\n--- Training Finished ---")
+final_score, normalized_weights = fusion_model(all_scores)
+final_score = final_score.detach()
+normalized_weights = normalized_weights.detach()
 
-right_num = total_num = right_num_5 = 0
-names = []
-preds = []
-scores = []
-mean = 0
+print("\nLearned Raw Weights (unnormalized):")
+stream_names = ['Joint', 'Bone', 'Joint-Motion', 'Bone-Motion']
+final_raw_weights = fusion_model.weights.data.numpy()
+for name, weight in zip(stream_names, final_raw_weights):
+    print(f"- {name}: {weight:.4f}")
 
-with open('predictions_wo_val_final_test.csv', 'w') as f:
+print("\nLearned Normalized Weights (used for fusion):")
+final_normalized_weights = normalized_weights.numpy()
+for name, weight in zip(stream_names, final_normalized_weights):
+    print(f"- {name}: {weight:.4f}")
 
-    for i in tqdm(range(len(label[0]))):
-        name, l = label[:, i]
-        names.append(name)
-        name1, r11 = r1[i]
-        name2, r22 = r2[i]
-        name3, r33 = r3[i]
-        name4, r44 = r4[i]
-        assert name == name1 == name2 == name3 == name4
+# Calculate final accuracy
+pred = torch.argmax(final_score, dim=1)
+right_num = (pred == labels).sum().item()
+total_num = len(labels)
+acc = right_num / total_num
 
-        mean += r11.mean()   # 有何意义
-        score = (r11*alpha[0] + r22*alpha[1] + r33*alpha[2] + r44*alpha[3]) / np.array(alpha).sum()
-        # score = (r11*alpha[0] + r22*alpha[1] + r33*alpha[2] + r44*alpha[3]) / np.array(alpha).mean()
-        # score = r11*alpha[0] 
-        rank_5 = score.argsort()[-5:]
-        right_num_5 += int(int(l) in rank_5)  # 判断正确标签是否在rank_5中
+rank_5 = torch.topk(final_score, 5, dim=1).indices
+right_num_5 = sum(labels[i] in rank_5[i] for i in range(total_num))
+acc5 = right_num_5 / total_num
 
-        pred = np.argmax(score)
-        scores.append(score)
-        preds.append(pred)
-        right_num += int(pred == int(l))
+print(f'\nTotal samples: {total_num}')
+print(f'Top-1 Accuracy: {acc:.4f}')
+print(f'Top-5 Accuracy: {acc5:.4f}')
 
-        total_num += 1
-        f.write('{}, {}\n'.format(name, pred))
-        # pdb.set_trace()
+# --- 5. Save predictions ---
+with open('predictions_wo_val_final_test_learned.csv', 'w') as f:
+    for i in range(total_num):
+        f.write('{}, {}\n'.format(names[i], pred[i].item()))
 
-    acc = right_num / total_num
-    acc5 = right_num_5 / total_num
-    print(total_num)
-    print('top1: ', acc)
-    print('top5: ', acc5)
-
-f.close()
-# print(mean/len(label[0]))
-# with open('./val_pred.pkl', 'wb') as f:
-#     # score_dict = dict(zip(names, preds))
-#     score_dict = (names, preds)
-#     pickle.dump(score_dict, f)
-
-with open('./gcn_ensembled_final_test.pkl', 'wb') as f:
-    score_dict = dict(zip(names, scores))
+with open('./gcn_ensembled_final_test_learned.pkl', 'wb') as f:
+    score_dict = dict(zip(names, final_score.numpy()))
     pickle.dump(score_dict, f)
+
+print("\nPredictions saved to 'predictions_wo_val_final_test_learned.csv'")
+print("Ensembled scores saved to 'gcn_ensembled_final_test_learned.pkl'")
