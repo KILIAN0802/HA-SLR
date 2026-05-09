@@ -1,7 +1,15 @@
 import cv2
-from mediapipe.python.solutions import holistic as mp_holistic
-from mediapipe.python.solutions import drawing_utils as mp_drawing
+import mediapipe as mp
 import numpy as np
+
+# Giải pháp nạp động để tránh lỗi cấu trúc module trên Linux
+try:
+    mp_holistic = mp.solutions.holistic
+    mp_drawing = mp.solutions.drawing_utils
+except AttributeError:
+    # Nếu nạp kiểu thường lỗi, thử nạp sâu hơn
+    import mediapipe.python.solutions.holistic as mp_holistic
+    import mediapipe.python.solutions.drawing_utils as mp_drawing
 import os
 from tqdm import tqdm
 import argparse
