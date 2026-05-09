@@ -1,6 +1,6 @@
 import cv2
-import mediapipe.python.solutions.holistic as mp_holistic
-import mediapipe.python.solutions.drawing_utils as mp_drawing
+from mediapipe.python.solutions import holistic as mp_holistic
+from mediapipe.python.solutions import drawing_utils as mp_drawing
 import numpy as np
 import os
 from tqdm import tqdm
