@@ -8,6 +8,8 @@ import argparse
 # Thiết lập giới hạn luồng để tránh lỗi "Can't spawn new thread" trên Server
 os.environ['OMP_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
+os.environ['OPENCV_FOR_THREADS_NUM'] = '1'
+cv2.setNumThreads(1)
 
 # Nạp MediaPipe Solutions
 try:
