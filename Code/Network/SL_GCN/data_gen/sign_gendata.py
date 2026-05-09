@@ -111,7 +111,7 @@ if __name__ == '__main__':
     # parser.add_argument('--data_path', default='/data/sign/test_npy/npy3') #'train_npy/npy3', 'va_npy/npy3'
     # parser.add_argument('--label_path', default='../data/sign/27/test_labels_pseudo.csv') # 'train_labels.csv', 'val_gt.csv'
     parser.add_argument('--out_folder', default='../data/sign_autsl/')
-    parser.add_argument('--points', default='27_cvpr')
+    parser.add_argument('--points', default='27_direct')
     arg = parser.parse_args()
 
     # pointsl = ['body_27', 'hands']
