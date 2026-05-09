@@ -54,6 +54,13 @@ def extract_landmarks(video_path, visualize=False):
                     lm = results.right_hand_landmarks.landmark[idx]
                     frame_landmarks[17 + i] = [lm.x, lm.y, lm.z]
             
+            # --- NORMALIZATION: Trừ tọa độ Nose (khớp 0) ---
+            # Chỉ thực hiện nếu khớp Nose được nhận diện (không phải 0,0,0)
+            if not np.all(frame_landmarks[0] == 0):
+                nose_coord = frame_landmarks[0].copy()
+                frame_landmarks = frame_landmarks - nose_coord
+            # ----------------------------------------------
+
             sequence.append(frame_landmarks)
             
             if visualize:

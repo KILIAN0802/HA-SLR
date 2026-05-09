@@ -24,6 +24,10 @@ selected_joints = {
     '27_cvpr': np.concatenate(([0,3,4,5,6,7,8],     # [0,1,2,3,4,5,6]  # noise\eyes\shoulders\elbows
                     [91,95,96,99,100,103,104,107,108,111],  # [7,8,9,10,11,12,13,14,15,16]  # 7-16 (+5)  12-21
                     [112,116,117,120,121,124,125,128,129,132]), axis=0), # [17,18,19,20,21,22,23,24,25,26]  # 27_cvpr 
+    
+    # Thêm cấu hình cho dữ liệu đã trích xuất sẵn 27 điểm
+    '27_direct': np.arange(27),
+    
     'hands':   np.concatenate(([91,95,96,99,100,103,104,107,108,111],  # [7,8,9,10,11,12,13,14,15,16]  # 7-16 (+5)  12-21
                     [112,116,117,120,121,124,125,128,129,132]), axis=0),
     'body_27':    [0,5,6,7,8,9,10]
@@ -47,8 +51,19 @@ def gendata(data_path, label_path, out_path, part='train', config='27'):
         line = line.split(',')
 
         sample_names.append(line[0])
-        data.append(os.path.join(data_path, line[0] + '_color.mp4.npy'))
-        # print(line[1])
+        
+        # Sửa logic tìm file: linh hoạt với cả 2 định dạng tên
+        potential_path_1 = os.path.join(data_path, line[0] + '_color.mp4.npy')
+        potential_path_2 = os.path.join(data_path, line[0] + '.npy')
+        
+        if os.path.exists(potential_path_1):
+            data.append(potential_path_1)
+        elif os.path.exists(potential_path_2):
+            data.append(potential_path_2)
+        else:
+            # Nếu không thấy cả 2, cứ add path 1 để báo lỗi FileNotFound sau này nếu cần
+            data.append(potential_path_1)
+
         labels.append(int(line[1]))
         # print(labels[-1])
 
