@@ -1,13 +1,12 @@
 import cv2
-import mediapipe as mp
+import mediapipe.python.solutions.holistic as mp_holistic
+import mediapipe.python.solutions.drawing_utils as mp_drawing
 import numpy as np
 import os
 from tqdm import tqdm
 import argparse
 
-# Khởi tạo MediaPipe Holistic
-mp_holistic = mp.solutions.holistic
-mp_drawing = mp.solutions.drawing_utils
+# Khởi tạo MediaPipe Holistic (đã nạp từ import)
 
 # Cấu trúc 27 điểm khớp theo sign_27.py (sau khi shift -5)
 # Pose: 0 (Nose), 1 (L Shoulder), 2 (R Shoulder), 3 (L Elbow), 4 (R Elbow), 5 (L Wrist), 6 (R Wrist)
