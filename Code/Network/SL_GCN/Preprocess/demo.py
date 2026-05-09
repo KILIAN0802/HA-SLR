@@ -1,16 +1,18 @@
 import cv2
 import mediapipe as mp
 import numpy as np
+import os
 
-# Giải pháp nạp động để tránh lỗi cấu trúc module trên Linux
+print(f"--- DEBUG: MediaPipe is being loaded from: {mp.__file__} ---")
+
 try:
     mp_holistic = mp.solutions.holistic
     mp_drawing = mp.solutions.drawing_utils
-except AttributeError:
-    # Nếu nạp kiểu thường lỗi, thử nạp sâu hơn
-    import mediapipe.python.solutions.holistic as mp_holistic
-    import mediapipe.python.solutions.drawing_utils as mp_drawing
-import os
+except Exception as e:
+    print(f"--- DEBUG: Error accessing mp.solutions: {e} ---")
+    # Dự phòng cho một số bản phân phối Linux
+    import mediapipe.solutions.holistic as mp_holistic
+    import mediapipe.solutions.drawing_utils as mp_drawing
 from tqdm import tqdm
 import argparse
 
