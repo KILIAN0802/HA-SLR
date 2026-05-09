@@ -3,16 +3,14 @@ import mediapipe as mp
 import numpy as np
 import os
 
-print(f"--- DEBUG: MediaPipe is being loaded from: {mp.__file__} ---")
-
+# Nạp MediaPipe Solutions
 try:
+    import mediapipe.python.solutions.holistic as mp_holistic
+    import mediapipe.python.solutions.drawing_utils as mp_drawing
+except ModuleNotFoundError:
+    # Dự phòng cho các phiên bản nạp trực tiếp qua solutions
     mp_holistic = mp.solutions.holistic
     mp_drawing = mp.solutions.drawing_utils
-except Exception as e:
-    print(f"--- DEBUG: Error accessing mp.solutions: {e} ---")
-    # Dự phòng cho một số bản phân phối Linux
-    import mediapipe.solutions.holistic as mp_holistic
-    import mediapipe.solutions.drawing_utils as mp_drawing
 from tqdm import tqdm
 import argparse
 
