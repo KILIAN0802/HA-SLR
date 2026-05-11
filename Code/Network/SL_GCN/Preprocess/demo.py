@@ -17,7 +17,7 @@ try:
     import mediapipe.solutions as mp_solutions
     mp_holistic = mp_solutions.holistic
     mp_drawing = mp_solutions.drawing_utils
-except AttributeError:
+except (ModuleNotFoundError, AttributeError):
     # For older versions of MediaPipe
     import mediapipe.python.solutions.holistic as mp_holistic
     import mediapipe.python.solutions.drawing_utils as mp_drawing
