@@ -16,26 +16,39 @@ parts = {
     'joint', 'bone'
 }
 
-import argparse
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Motion Data Converter.')
-    parser.add_argument('--datasets', default='sign_gsl/27_cvpr')  # sign_autsl/27_cvpr sign/27_cvpr   sign/27_2  sign/hands  sign/body_27  sign_lsa64/27_cvpr
+    parser.add_argument('--datasets', default='sign_gsl/27_cvpr')
+    parser.add_argument('--data_path', type=str, default=None, help='Directory containing joint/bone data')
+    parser.add_argument('--out_path', type=str, default=None, help='Directory to save motion data')
     arg = parser.parse_args()
 
-    dataset = arg.datasets
-    # for dataset in datasets:
+    data_base = arg.data_path if arg.data_path else '../data/{}'.format(arg.datasets)
+    out_base = arg.out_path if arg.out_path else data_base
+
     for splits in all_splits:
         for part in parts:
-            print(dataset, set, part)
-            data = np.load('../data/{}/{}_data_{}.npy'.format(dataset, splits, part))
+            src_path = os.path.join(data_base, '{}_data_{}.npy'.format(splits, part))
+            dst_path = os.path.join(out_base, '{}_data_{}_motion.npy'.format(splits, part))
+            
+            if not os.path.exists(src_path):
+                print(f"Warning: {src_path} not found, skipping...")
+                continue
+
+            print(f"Processing: {src_path}")
+            data = np.load(src_path)
             N, C, T, V, M = data.shape
-            print(data.shape)
+            
             fp_sp = open_memmap(
-                '../data/{}/{}_data_{}_motion.npy'.format(dataset, splits, part),
+                dst_path,
                 dtype='float32',
                 mode='w+',
                 shape=(N, C, T, V, M))
+            
             for t in tqdm(range(T - 1)):
-                fp_sp[:, :, t, :, :] = data[:, :, t + 1, :, :] - data[:, :, t, :, :]  # core code
-            fp_sp[:, :, T - 1, :, :] = 0  # 最后一帧的偏移 设为0
+                fp_sp[:, :, t, :, :] = data[:, :, t + 1, :, :] - data[:, :, t, :, :]
+            fp_sp[:, :, T - 1, :, :] = 0
+            
+            print(f"Saved motion data to {dst_path}")
+
