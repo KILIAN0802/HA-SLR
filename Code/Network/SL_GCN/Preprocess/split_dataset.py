@@ -2,6 +2,9 @@ import os
 import argparse
 
 def split_data(input_csv, output_dir):
+    # Create output directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
+    
     # Đọc tất cả các dòng từ file labels.csv tổng
     with open(input_csv, 'r', encoding='utf-8') as f:
         lines = f.readlines()
