@@ -22,8 +22,10 @@ model_args:
   num_point: 27
   num_person: 1
   graph: graph.sign_27.Graph
+  A_hands: graph.sign_27_A_hands.Graph
   graph_args:
     labeling_mode: spatial
+
 phase: train
 device: [0]
 batch_size: 32

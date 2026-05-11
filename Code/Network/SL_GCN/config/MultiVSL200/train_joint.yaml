@@ -27,8 +27,10 @@ model_args:
   num_point: 27       # Đảm bảo là 27 khớp
   num_person: 1
   graph: graph.sign_27.Graph   # Sử dụng file đồ thị 27 khớp
+  A_hands: graph.sign_27_A_hands.Graph
   graph_args:
     labeling_mode: spatial
+
 
 # Cấu hình Huấn luyện
 phase: train
