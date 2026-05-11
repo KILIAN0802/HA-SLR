@@ -16,6 +16,7 @@ parts = {
     'joint', 'bone'
 }
 
+import argparse
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Motion Data Converter.')
