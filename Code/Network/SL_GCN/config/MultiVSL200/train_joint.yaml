@@ -1,15 +1,24 @@
 # Thư mục lưu kết quả huấn luyện
 work_dir: ./work_dir/MultiVSL200/Joint/baseline
+Experiment_name: MultiVSL200/Joint
 
 # Cấu hình Feeder (Bộ nạp dữ liệu)
 feeder: feeders.feeder_cvpr.Feeder
 train_feeder_args:
   data_path: data/processed/27_direct/train_data_joint.npy
   label_path: data/processed/27_direct/train_label.pkl
+  window_size: 150
+  debug: False
+val_feeder_args:
+  data_path: data/processed/27_direct/val_data_joint.npy
+  label_path: data/processed/27_direct/val_label.pkl
+  window_size: 150
+  debug: False
 test_feeder_args:
   data_path: data/processed/27_direct/val_data_joint.npy
   label_path: data/processed/27_direct/val_label.pkl
-
+  window_size: 150
+  debug: False
 
 # Cấu hình Mô hình (Model)
 model: model.hand_aware_sl_lgcn.Model
@@ -25,6 +34,8 @@ model_args:
 phase: train
 device: [0]
 batch_size: 32        # Điều chỉnh tùy theo bộ nhớ GPU của bạn
-base_lr: 0.1
+train_base_lr: 0.1
+test_base_lr: 0.1
 step: [50, 100, 150]  # Các epoch sẽ giảm learning rate
 num_epoch: 200
+
