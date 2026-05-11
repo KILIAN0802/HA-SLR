@@ -114,7 +114,14 @@ def main():
     ) as holistic:
         
         for video_name in tqdm(video_files):
+            file_name_no_ext = video_name.rsplit('.', 1)[0]
+            output_npy_path = os.path.join(args.output_dir, file_name_no_ext + '.npy')
+            
+            if os.path.exists(output_npy_path):
+                # Nếu file .npy đã tồn tại rồi thì bỏ qua, chuyển sang video tiếp theo
+                continue
             video_path = os.path.join(args.input_dir, video_name)
+            
             
             raw_skel = extract_landmarks(video_path, holistic, visualize=args.visualize)
             processed_skel = resample_sequence(raw_skel, target_len=args.max_frame)
