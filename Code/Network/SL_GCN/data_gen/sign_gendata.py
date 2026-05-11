@@ -50,21 +50,22 @@ def gendata(data_path, label_path, out_path, part='train', config='27'):
         line = line.strip()
         line = line.split(',')
 
-        sample_names.append(line[0])
-        
-        # Sửa logic tìm file: linh hoạt với cả 2 định dạng tên
+        # Sửa logic tìm file: Chỉ thêm nếu file thực sự tồn tại
         potential_path_1 = os.path.join(data_path, line[0] + '_color.mp4.npy')
         potential_path_2 = os.path.join(data_path, line[0] + '.npy')
         
         if os.path.exists(potential_path_1):
             data.append(potential_path_1)
+            labels.append(int(line[1]))
+            sample_names.append(line[0])
         elif os.path.exists(potential_path_2):
             data.append(potential_path_2)
+            labels.append(int(line[1]))
+            sample_names.append(line[0])
         else:
-            # Nếu không thấy cả 2, cứ add path 1 để báo lỗi FileNotFound sau này nếu cần
-            data.append(potential_path_1)
+            print(f"Warning: File not found for {line[0]} in {data_path}")
+            continue
 
-        labels.append(int(line[1]))
         # print(labels[-1])
 
     fp = np.zeros((len(data), max_frame, num_joints, num_channels, max_body_true), dtype=np.float32)
