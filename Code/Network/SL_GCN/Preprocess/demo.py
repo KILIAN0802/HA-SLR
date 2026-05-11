@@ -13,14 +13,16 @@ cv2.setNumThreads(1)
 
 # Nạp MediaPipe Solutions
 try:
-    # For newer versions of MediaPipe
-    import mediapipe.solutions as mp_solutions
-    mp_holistic = mp_solutions.holistic
-    mp_drawing = mp_solutions.drawing_utils
-except (ModuleNotFoundError, AttributeError):
-    # For older versions of MediaPipe
-    import mediapipe.python.solutions.holistic as mp_holistic
-    import mediapipe.python.solutions.drawing_utils as mp_drawing
+    from mediapipe.python.solutions import holistic as mp_holistic
+    from mediapipe.python.solutions import drawing_utils as mp_drawing
+except ImportError:
+    try:
+        import mediapipe.solutions.holistic as mp_holistic
+        import mediapipe.solutions.drawing_utils as mp_drawing
+    except ImportError:
+        import mediapipe.solutions as mp_solutions
+        mp_holistic = mp_solutions.holistic
+        mp_drawing = mp_solutions.drawing_utils
 
 # Cấu trúc 27 điểm khớp
 POSE_INDICES = [0, 11, 12, 13, 14, 15, 16]
