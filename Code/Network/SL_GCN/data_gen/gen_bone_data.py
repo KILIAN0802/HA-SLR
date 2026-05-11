@@ -115,6 +115,7 @@ all_splits = {
 
 from tqdm import tqdm
 
+import argparse
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Bone Data Converter.')
