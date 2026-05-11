@@ -1,4 +1,5 @@
 import os
+import argparse
 import numpy as np
 from numpy.lib.format import open_memmap
 import pdb
@@ -115,50 +116,58 @@ all_splits = {
 
 from tqdm import tqdm
 
-import argparse
+def process_file(joint_path, bone_path, tag, bias):
+    print(f"Processing: {joint_path}")
+    data = np.load(joint_path)
+    N, C, T, V, M = data.shape  
+    
+    fp_sp = open_memmap(
+        bone_path,
+        dtype='float32',
+        mode='w+',
+        shape=(N, 3, T, V, M))
+
+    fp_sp[:, :C, :, :, :] = data
+    for v1, v2 in tqdm(paris[tag]):
+        v1 -= bias
+        v2 -= bias
+        if v1 < V and v2 < V:
+            fp_sp[:, :, :, v2, :] = data[:, :, :, v2, :] - data[:, :, :, v1, :]
+        else:
+            print(f"Index out of range: {v1}, {v2} for V={V}")
+
+    print(f"Saved bone data to {bone_path}")
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Bone Data Converter.')
     parser.add_argument('--datasets', default='sign_gsl/27_cvpr')
     parser.add_argument('--tag', default='sign/27')  
-    parser.add_argument('--data_path', type=str, default=None, help='Directory containing joint data')
-    parser.add_argument('--out_path', type=str, default=None, help='Directory to save bone data')
+    parser.add_argument('--data_path', type=str, default=None, help='File or directory containing joint data')
+    parser.add_argument('--out_path', type=str, default=None, help='File or directory to save bone data')
     arg = parser.parse_args()
 
-    # Cấu hình đường dẫn linh hoạt
-    data_base = arg.data_path if arg.data_path else '../data/{}'.format(arg.datasets)
-    out_base = arg.out_path if arg.out_path else data_base
-    
     tag = arg.tag 
     bias = 5 # Mặc định cho các bộ sign/27
 
-    for splits in all_splits:
-        joint_path = os.path.join(data_base, '{}_data_joint.npy'.format(splits))
-        bone_path = os.path.join(out_base, '{}_data_bone.npy'.format(splits))
-        
-        if not os.path.exists(joint_path):
-            print(f"Warning: {joint_path} not found, skipping...")
-            continue
+    # Trường hợp 1: data_path là file lẻ
+    if arg.data_path and os.path.isfile(arg.data_path):
+        src_path = arg.data_path
+        dst_path = arg.out_path if arg.out_path else src_path.replace('joint.npy', 'bone.npy')
+        process_file(src_path, dst_path, tag, bias)
+    
+    # Trường hợp 2: data_path là thư mục
+    else:
+        data_base = arg.data_path if arg.data_path else '../data/{}'.format(arg.datasets)
+        out_base = arg.out_path if arg.out_path else data_base
 
-        print(f"Processing: {joint_path}")
-        data = np.load(joint_path)
-        N, C, T, V, M = data.shape  
-        
-        fp_sp = open_memmap(
-            bone_path,
-            dtype='float32',
-            mode='w+',
-            shape=(N, 3, T, V, M))
+        for splits in all_splits:
+            joint_path = os.path.join(data_base, '{}_data_joint.npy'.format(splits))
+            bone_path = os.path.join(out_base, '{}_data_bone.npy'.format(splits))
+            
+            if not os.path.exists(joint_path):
+                continue
 
-        fp_sp[:, :C, :, :, :] = data
-        for v1, v2 in tqdm(paris[tag]):
-            v1 -= bias
-            v2 -= bias
-            # Đảm bảo index không vượt quá số lượng keypoint
-            if v1 < V and v2 < V:
-                fp_sp[:, :, :, v2, :] = data[:, :, :, v2, :] - data[:, :, :, v1, :]
-            else:
-                print(f"Index out of range: {v1}, {v2} for V={V}")
+            process_file(joint_path, bone_path, tag, bias)
 
-        print(f"Saved bone data to {bone_path}")
 
