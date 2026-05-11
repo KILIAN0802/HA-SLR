@@ -12,8 +12,15 @@ os.environ['OPENCV_FOR_THREADS_NUM'] = '1'
 cv2.setNumThreads(1)
 
 # Nạp MediaPipe Solutions
-mp_holistic = mp.solutions.holistic
-mp_drawing = mp.solutions.drawing_utils
+try:
+    # For newer versions of MediaPipe
+    import mediapipe.solutions as mp_solutions
+    mp_holistic = mp_solutions.holistic
+    mp_drawing = mp_solutions.drawing_utils
+except AttributeError:
+    # For older versions of MediaPipe
+    import mediapipe.python.solutions.holistic as mp_holistic
+    import mediapipe.python.solutions.drawing_utils as mp_drawing
 
 # Cấu trúc 27 điểm khớp
 POSE_INDICES = [0, 11, 12, 13, 14, 15, 16]
