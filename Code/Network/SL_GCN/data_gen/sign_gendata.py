@@ -112,6 +112,7 @@ if __name__ == '__main__':
     # parser.add_argument('--label_path', default='../data/sign/27/test_labels_pseudo.csv') # 'train_labels.csv', 'val_gt.csv'
     parser.add_argument('--out_folder', default='../data/sign_autsl/')
     parser.add_argument('--points', default='27_direct')
+    parser.add_argument('--label_dir', type=str, default='../data/sign', help='Directory containing label files')
     arg = parser.parse_args()
 
     # pointsl = ['body_27', 'hands']
@@ -129,9 +130,9 @@ if __name__ == '__main__':
     data_paths = ["/raid/zhengjian/Isolated_SLR/dataset/train_npy3", 
                 "/raid/zhengjian/Isolated_SLR/dataset/val_npy3", 
                 "/raid/zhengjian/Isolated_SLR/dataset/test_npy3"]
-    label_paths = ["../data/sign/train_labels.csv", 
-                "../data/sign/val_labels.csv", 
-                "../data/sign/ground_truth.csv"]
+    label_paths = [os.path.join(arg.label_dir, "train_labels.csv"), 
+                os.path.join(arg.label_dir, "val_labels.csv"), 
+                os.path.join(arg.label_dir, "test_labels.csv")]
     for i in range(3):
         gendata(
             data_paths[i],
