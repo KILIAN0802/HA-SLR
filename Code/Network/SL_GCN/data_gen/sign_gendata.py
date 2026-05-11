@@ -113,26 +113,27 @@ if __name__ == '__main__':
     parser.add_argument('--out_folder', default='../data/sign_autsl/')
     parser.add_argument('--points', default='27_direct')
     parser.add_argument('--label_dir', type=str, default='../data/sign', help='Directory containing label files')
+    parser.add_argument('--data_path', type=str, help='Base directory for data')
+    parser.add_argument('--train_dir', type=str, default='train_npy3', help='Name of the training data directory')
+    parser.add_argument('--val_dir', type=str, default='val_npy3', help='Name of the validation data directory')
+    parser.add_argument('--test_dir', type=str, default='test_npy3', help='Name of the test data directory')
     arg = parser.parse_args()
 
-    # pointsl = ['body_27', 'hands']
-
-    # for points in pointsl:
+    # ... existing code ...
 
     out_path = os.path.join(arg.out_folder, arg.points)
-    print(out_path) # ../data/sign/27
+    print(out_path)
 
     if not os.path.exists(out_path):
         os.makedirs(out_path)
 
     parts = ['train', 'val', 'test']
-    # data_paths = ["../dataset/train_npy3", "../dataset/val_npy3", "../dataset/test_npy3"]
-    data_paths = ["/raid/zhengjian/Isolated_SLR/dataset/train_npy3", 
-                "/raid/zhengjian/Isolated_SLR/dataset/val_npy3", 
-                "/raid/zhengjian/Isolated_SLR/dataset/test_npy3"]
-    label_paths = [os.path.join(arg.label_dir, "train_labels.csv"), 
-                os.path.join(arg.label_dir, "val_labels.csv"), 
-                os.path.join(arg.label_dir, "test_labels.csv")]
+    data_paths = [os.path.join(arg.data_path, arg.train_dir),
+                  os.path.join(arg.data_path, arg.val_dir),
+                  os.path.join(arg.data_path, arg.test_dir)]
+    label_paths = [os.path.join(arg.label_dir, "train_labels.csv"),
+                   os.path.join(arg.label_dir, "val_labels.csv"),
+                   os.path.join(arg.label_dir, "test_labels.csv")]
     for i in range(3):
         gendata(
             data_paths[i],
