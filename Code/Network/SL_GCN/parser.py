@@ -1,4 +1,4 @@
-from utils import str2bool
+from .utils import str2bool
 import argparse
 
 
