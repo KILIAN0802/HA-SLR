@@ -33,4 +33,3 @@ train_base_lr: 0.1
 test_base_lr: 0.1
 step: [50, 100, 150]
 num_epoch: 200
-
