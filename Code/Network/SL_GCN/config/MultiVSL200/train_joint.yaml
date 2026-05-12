@@ -1,6 +1,9 @@
 # Thư mục lưu kết quả huấn luyện
 work_dir: ./work_dir/MultiVSL200/Joint/baseline
 Experiment_name: MultiVSL200/Joint
+joint_sign: processed
+joint_type: 27_direct
+splits: [test]
 
 # Cấu hình Feeder (Bộ nạp dữ liệu)
 feeder: feeders.feeder_cvpr.Feeder
