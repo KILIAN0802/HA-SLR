@@ -191,29 +191,29 @@ class Processor():
         if os.name == 'nt' or not torch.cuda.is_available():
             requested_workers = 0
         self.args.num_worker = max(0, requested_workers)
-        # if self.args.phase.lower() == 'train':
-        self.data_loader['train'] = torch.utils.data.DataLoader(
-            dataset=Feeder(**self.args.train_feeder_args),
-            batch_size=self.args.batch_size,
-            shuffle=True,
-            num_workers=self.args.num_worker,
-            drop_last=True,
-            worker_init_fn=init_seed)
-        self.data_loader['val'] = torch.utils.data.DataLoader(
-            dataset=Feeder(**self.args.val_feeder_args),
-            batch_size=self.args.test_batch_size,
-            shuffle=False,
-            num_workers=self.args.num_worker,
-            drop_last=False,
-            worker_init_fn=init_seed)
-        # else:
-        self.data_loader['test'] = torch.utils.data.DataLoader(
-            dataset=Feeder(**self.args.test_feeder_args),
-            batch_size=self.args.test_batch_size,
-            shuffle=False,
-            num_workers=self.args.num_worker,
-            drop_last=False,
-            worker_init_fn=init_seed)
+        if self.args.phase.lower() == 'train':
+            self.data_loader['train'] = torch.utils.data.DataLoader(
+                dataset=Feeder(**self.args.train_feeder_args),
+                batch_size=self.args.batch_size,
+                shuffle=True,
+                num_workers=self.args.num_worker,
+                drop_last=True,
+                worker_init_fn=init_seed)
+            self.data_loader['val'] = torch.utils.data.DataLoader(
+                dataset=Feeder(**self.args.val_feeder_args),
+                batch_size=self.args.test_batch_size,
+                shuffle=False,
+                num_workers=self.args.num_worker,
+                drop_last=False,
+                worker_init_fn=init_seed)
+        else:
+            self.data_loader['test'] = torch.utils.data.DataLoader(
+                dataset=Feeder(**self.args.test_feeder_args),
+                batch_size=self.args.test_batch_size,
+                shuffle=False,
+                num_workers=self.args.num_worker,
+                drop_last=False,
+                worker_init_fn=init_seed)
     def load_model(self):
         # 1. Xác định thiết bị (CPU hoặc GPU)
         use_cuda = torch.cuda.is_available()
@@ -246,7 +246,7 @@ class Processor():
                 with open(self.args.weights, 'rb') as f: # Mở file pkl nên dùng chế độ 'rb'
                     weights = pickle.load(f)
             else:
-                weights = torch.load(self.args.weights, map_location=self.device)
+                weights = torch.load(self.args.weights, map_location=self.device, weights_only=False)
 
             # Support both plain state_dict files and full training checkpoints.
             if isinstance(weights, dict) and 'model_state_dict' in weights:
@@ -352,7 +352,7 @@ class Processor():
             raise FileNotFoundError('Resume checkpoint not found: {}'.format(ckpt_path))
 
         self.print_log('Resume training from checkpoint: {}'.format(ckpt_path))
-        ckpt = torch.load(ckpt_path, map_location=self.device)
+        ckpt = torch.load(ckpt_path, map_location=self.device, weights_only=False)
 
         if not isinstance(ckpt, dict) or 'model_state_dict' not in ckpt:
             raise ValueError('Invalid resume checkpoint format: {}'.format(ckpt_path))
@@ -564,18 +564,20 @@ class Processor():
                                 
                                 assert(true[i] == self.data_loader[ln].dataset.label[int(index[i])])
                                 try:
-                                    if (self.data_loader[ln].dataset.label==predict[i]).all() == False:
-                                        wrong_csv.append([index[i], predict[i], true[i], os.path.dirname(self.data_loader['train'].dataset.sample_name[int(np.where(self.data_loader['train'].dataset.label==predict[i])[0][0])]), self.data_loader[ln].dataset.sample_name[int(index[i])]])
+                                    # Try to find a reference sample path for the predicted class
+                                    # Prefer 'train' loader if available, otherwise use current loader
+                                    ref_loader = self.data_loader.get('train', self.data_loader[ln])
+                                    ref_indices = np.where(ref_loader.dataset.label == predict[i])[0]
+                                    if len(ref_indices) > 0:
+                                        ref_sample_path = os.path.dirname(ref_loader.dataset.sample_name[int(ref_indices[0])])
                                     else:
-                                        wrong_csv.append([index[i], predict[i], true[i], os.path.dirname(self.data_loader[ln].dataset.sample_name[int(np.where(self.data_loader[ln].dataset.label==predict[i])[0][0])]), self.data_loader[ln].dataset.sample_name[int(index[i])]])
+                                        ref_sample_path = "unknown"
+
+                                    wrong_csv.append([index[i], predict[i], true[i], ref_sample_path, self.data_loader[ln].dataset.sample_name[int(index[i])]])
                                     f_w.write(str(index[i]) + ',' + str(predict[i]) + ',' + str(true[i]) + '\n')
                                 except Exception as e:
-                                    print(e)
-                                    print(index[i])
-                                    print(predict[i])
-                                    print(true[i])
-                                    # print(os.path.dirname(self.data_loader[ln].dataset.sample_name[int(np.where(self.data_loader[ln].dataset.label==predict[i])[0][0])]))
-                                    pdb.set_trace()
+                                    print("Error logging wrong sample: ", e)
+                                    # f_w.write(str(index[i]) + ',' + str(predict[i]) + ',' + str(true[i]) + '\n')
                 
                 score = np.concatenate(all_acc)
 
