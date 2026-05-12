@@ -54,11 +54,13 @@ if __name__ == '__main__':
 
     # Load labels
     with open(p.joint_test_feeder_args['label_path'], 'rb') as f:
-        label_info = pickle.load(f)
+        try:
+            names, label = pickle.load(f)
+        except:
+            # for pickle file from python2
+            names, label = pickle.load(f, encoding='latin1')
     
-    # Assuming label_info is a list of [name, label] pairs
-    label = np.array([item[1] for item in label_info])
-    names = [item[0] for item in label_info]
+    label = np.array(label)
 
     alpha = [1.0, 0.9, 0.5, 0.5] # Ensemble weights
 
