@@ -65,3 +65,7 @@ bone_motion_test_feeder_args:
   data_path: Code/Network/SL_GCN/data/processed/27_direct/test_data_bone_motion.npy
   label_path: Code/Network/SL_GCN/data/processed/27_direct/test_label.pkl
   window_size: 150
+
+# Load labels
+    with open(p.joint_test_feeder_args['label_path'], 'rb') as f:
+        names, label = pickle.load(f)
