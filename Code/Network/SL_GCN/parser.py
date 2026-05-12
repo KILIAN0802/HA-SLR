@@ -97,6 +97,8 @@ def get_parser():
         help='the name of weights which will be ignored in the initialization')
 
     # optim
+    parser.add_argument('--batch_size', type=int, default=256, help='training batch size')
+    parser.add_argument('--num_epoch', type=int, default=300, help='training epoch')
     # parser.add_argument(
     #     '--base-lr', type=float, default=0.01, help='initial learning rate')
     parser.add_argument(

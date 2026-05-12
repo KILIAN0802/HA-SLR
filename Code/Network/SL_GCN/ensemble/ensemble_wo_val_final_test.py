@@ -1,81 +1,95 @@
-import argparse
-import pickle
+import sys
+sys.path.append('.')
+from Code.Network.SL_GCN.parser import get_parser
+from Code.Network.SL_GCN.utils import import_class
+import yaml
 
-import numpy as np
-from tqdm import tqdm
-import pdb
+if __name__ == '__main__':
+    parser = get_parser()
+    p = parser.parse_args()
+    
+    with open(p.config, 'r') as f:
+        default_arg = yaml.load(f, Loader=yaml.FullLoader)
+    
+    # Update parser arguments based on the YAML file
+    key = list(default_arg.keys())
+    for k in default_arg.keys():
+        if k not in p.__dict__ or p.__dict__[k] is None:
+            p.__dict__[k] = default_arg[k]
 
+    # Function to run evaluation and get prediction scores
+    def get_scores(model_name, feeder_name, weights_path, feeder_args):
+        Model = import_class(model_name)
+        Feeder = import_class(feeder_name)
+        
+        model = Model(**p.joint_model_args).cuda() # Note: model_args are assumed to be similar
+        model.load_state_dict(torch.load(weights_path))
+        model.eval()
+        
+        data_loader = torch.utils.data.DataLoader(
+            dataset=Feeder(**feeder_args),
+            batch_size=p.batch_size,
+            shuffle=False,
+            num_workers=p.num_worker)
+            
+        results = []
+        for data, label, index in tqdm(data_loader):
+            data = data.float().cuda()
+            with torch.no_grad():
+                output = model(data)
+            results.append(output.data.cpu().numpy())
+        
+        return np.concatenate(results)
 
-"""
+    # Get scores for each model
+    r1_scores = get_scores(p.joint_model, p.joint_feeder, p.joint_weights, p.joint_test_feeder_args)
+    r2_scores = get_scores(p.bone_model, p.bone_feeder, p.bone_weights, p.bone_test_feeder_args)
+    r3_scores = get_scores(p.joint_motion_model, p.joint_motion_feeder, p.joint_motion_weights, p.joint_motion_test_feeder_args)
+    r4_scores = get_scores(p.bone_motion_model, p.bone_motion_feeder, p.bone_motion_weights, p.bone_motion_test_feeder_args)
 
-$ python ensemble_wo_val_final_test.py
-100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 3742/3742 [00:00<00:00, 15775.07it/s]
-3742
-top1:  0.9647247461250668
-top5:  0.9975948690539819
-"""
+    # Load labels
+    with open(p.joint_test_feeder_args['label_path'], 'rb') as f:
+        label_info = pickle.load(f)
+    
+    # Assuming label_info is a list of [name, label] pairs
+    label = np.array([item[1] for item in label_info])
+    names = [item[0] for item in label_info]
 
-# label = open('./test_labels_pseudo.pkl', 'rb')
-label = open('./test_label.pkl', 'rb')
-label = np.array(pickle.load(label))
+    alpha = [1.0, 0.9, 0.5, 0.5] # Ensemble weights
 
-r1 = open('../work_dir/sign_27_final_test/eval_results/joint_epoch_226_9468_test.pkl', 'rb')
-r1 = list(pickle.load(r1).items())
-r2 = open('../work_dir/sign_27_final_test/eval_results/bone_epoch_239_9470_test.pkl', 'rb')
-r2 = list(pickle.load(r2).items())
-r3 = open('../work_dir/sign_27_final_test/eval_results/joint_motion_248_9301_test.pkl', 'rb')
-r3 = list(pickle.load(r3).items())
-r4 = open('../work_dir/sign_27_final_test/eval_results/bone_motion_217_9249_test.pkl', 'rb')
-r4 = list(pickle.load(r4).items())
+    right_num = total_num = right_num_5 = 0
+    preds = []
+    scores = []
 
-alpha = [1.0,0.9,0.5,0.5] # used in submission 1  # ensemble 权重
+    with open('predictions_wo_val_final_test.csv', 'w') as f:
+        for i in tqdm(range(len(label))):
+            l = label[i]
+            name = names[i]
+            
+            r11 = r1_scores[i]
+            r22 = r2_scores[i]
+            r33 = r3_scores[i]
+            r44 = r4_scores[i]
 
-right_num = total_num = right_num_5 = 0
-names = []
-preds = []
-scores = []
-mean = 0
+            score = (r11*alpha[0] + r22*alpha[1] + r33*alpha[2] + r44*alpha[3]) / np.array(alpha).sum()
+            
+            rank_5 = score.argsort()[-5:]
+            right_num_5 += int(l in rank_5)
 
-with open('predictions_wo_val_final_test.csv', 'w') as f:
+            pred = np.argmax(score)
+            scores.append(score)
+            preds.append(pred)
+            right_num += int(pred == l)
 
-    for i in tqdm(range(len(label[0]))):
-        name, l = label[:, i]
-        names.append(name)
-        name1, r11 = r1[i]
-        name2, r22 = r2[i]
-        name3, r33 = r3[i]
-        name4, r44 = r4[i]
-        assert name == name1 == name2 == name3 == name4
+            total_num += 1
+            f.write('{}, {}\n'.format(name, pred))
 
-        mean += r11.mean()   # 有何意义
-        score = (r11*alpha[0] + r22*alpha[1] + r33*alpha[2] + r44*alpha[3]) / np.array(alpha).sum()
-        # score = (r11*alpha[0] + r22*alpha[1] + r33*alpha[2] + r44*alpha[3]) / np.array(alpha).mean()
-        # score = r11*alpha[0] 
-        rank_5 = score.argsort()[-5:]
-        right_num_5 += int(int(l) in rank_5)  # 判断正确标签是否在rank_5中
+        acc = right_num / total_num
+        acc5 = right_num_5 / total_num
+        print(f'Total samples: {total_num}')
+        print(f'Top-1 Accuracy: {acc:.4f}')
+        print(f'Top-5 Accuracy: {acc5:.4f}')
 
-        pred = np.argmax(score)
-        scores.append(score)
-        preds.append(pred)
-        right_num += int(pred == int(l))
-
-        total_num += 1
-        f.write('{}, {}\n'.format(name, pred))
-        # pdb.set_trace()
-
-    acc = right_num / total_num
-    acc5 = right_num_5 / total_num
-    print(total_num)
-    print('top1: ', acc)
-    print('top5: ', acc5)
-
-f.close()
-# print(mean/len(label[0]))
-# with open('./val_pred.pkl', 'wb') as f:
-#     # score_dict = dict(zip(names, preds))
-#     score_dict = (names, preds)
-#     pickle.dump(score_dict, f)
-
-with open('./gcn_ensembled_final_test.pkl', 'wb') as f:
-    score_dict = dict(zip(names, scores))
-    pickle.dump(score_dict, f)
+    with open('./gcn_ensembled_final_test.pkl', 'wb') as f:
+        score_dict = dict(zip(names, scores))
+        pickle.dump(score_dict, f)
