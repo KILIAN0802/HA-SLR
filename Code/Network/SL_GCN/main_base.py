@@ -195,6 +195,15 @@ class Processor():
             
             if os.path.exists(candidate):
                 return candidate
+            else:
+                # Debug: if the file is missing, list the directory contents to help identify naming issues
+                parent = os.path.dirname(candidate)
+                if os.path.exists(parent):
+                    print(f"Warning: File '{os.path.basename(candidate)}' not found in: {parent}")
+                    try:
+                        print(f"Available files in that directory: {os.listdir(parent)}")
+                    except:
+                        pass
         return p
 
     def load_data(self):
