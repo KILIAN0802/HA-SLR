@@ -12,8 +12,8 @@ val_feeder_args:
   window_size: 150
   debug: False
 test_feeder_args:
-  data_path: data/processed/27_direct/val_data_bone_motion.npy
-  label_path: data/processed/27_direct/val_label.pkl
+  data_path: data/processed/27_direct/test_data_bone_motion.npy
+  label_path: data/processed/27_direct/test_label.pkl
   window_size: 150
   debug: False
 model: model.hand_aware_sl_lgcn.Model
