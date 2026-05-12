@@ -186,6 +186,25 @@ class Processor():
 
     def load_data(self):
         Feeder = import_class(self.args.feeder)
+
+        # Helper to fix paths if they don't exist in current directory
+        def fix_path(p):
+            if isinstance(p, str) and p and not os.path.exists(p):
+                script_dir = os.path.dirname(os.path.abspath(__file__))
+                # Remove leading './' if present and join with script_dir
+                candidate = os.path.normpath(os.path.join(script_dir, p.lstrip('./')))
+                if os.path.exists(candidate):
+                    return candidate
+            return p
+
+        # Fix paths in feeder args
+        for args_name in ['train_feeder_args', 'val_feeder_args', 'test_feeder_args']:
+            args_dict = getattr(self.args, args_name, {})
+            if 'data_path' in args_dict:
+                args_dict['data_path'] = fix_path(args_dict['data_path'])
+            if 'label_path' in args_dict:
+                args_dict['label_path'] = fix_path(args_dict['label_path'])
+
         self.data_loader = dict()
         requested_workers = int(self.args.num_worker)
         if os.name == 'nt' or not torch.cuda.is_available():
