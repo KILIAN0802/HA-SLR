@@ -1,14 +1,13 @@
 import sys
-sys.path.insert(0, '.')
-sys.path.insert(0, 'Code/Network/SL_GCN')
+sys.path.insert(0, '')
 import torch
 import yaml
 import pickle
 import numpy as np
 from tqdm import tqdm
 
-from parser import get_parser
-from model.utils import import_class
+from Code.Network.SL_GCN.parser import get_parser
+from Code.Network.SL_GCN.model.utils import import_class
 
 if __name__ == '__main__':
     parser = get_parser()
