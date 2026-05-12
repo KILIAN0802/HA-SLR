@@ -1,7 +1,7 @@
 import sys
 sys.path.append('.')
 from Code.Network.SL_GCN.parser import get_parser
-from Code.Network.SL_GCN.utils import import_class
+from Code.Network.SL_GCN.model.utils import import_class
 import yaml
 
 if __name__ == '__main__':
