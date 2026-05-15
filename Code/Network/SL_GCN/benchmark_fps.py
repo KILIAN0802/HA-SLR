@@ -18,6 +18,12 @@ def benchmark_fps():
 
     # Force test phase to avoid training-specific logic
     args.phase = 'test'
+
+    # Ensure train_feeder_args has window_size to avoid KeyError in Processor.__init__
+    # The Processor class uses this to format the work_dir path even in test phase.
+    if 'window_size' not in args.train_feeder_args:
+        ws = args.test_feeder_args.get('window_size', 150)
+        args.train_feeder_args['window_size'] = ws
     
     # 2. Initialize Processor and Model
     print(f"Loading model from config: {args.config}")
