@@ -37,6 +37,7 @@ def benchmark_fps():
     # 2. Initialize Processor and Model
     print(f"Loading model from config: {args.config}")
     processor = Processor(args)
+    processor.mk_dir() # Ensure work_dir exists before loading model
     processor.load_model()
     model = processor.model
     model.eval()
