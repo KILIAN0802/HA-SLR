@@ -47,7 +47,7 @@ def benchmark_fps():
     # 3. Determine Input Shape
     # Standard GCN input: [Batch, Channels, Frames, Joints, Persons]
     # Default values based on common HA-SLR-GCN settings
-    batch_size = 1 # We want to measure single-sample inference speed (Real-time)
+    batch_size = getattr(args, 'test_batch_size', 1) 
     channels = 3
     window_size = args.test_feeder_args.get('window_size', 150)
     num_joints = 27 # Usually 27 for this project's reduced keypoints
@@ -73,7 +73,7 @@ def benchmark_fps():
 
     # 6. Benchmark Loop
     num_iters = 200
-    print(f"Benchmarking over {num_iters} iterations...")
+    print(f"Benchmarking over {num_iters} iterations (Total samples: {num_iters * batch_size})...")
     
     start_time = time.perf_counter()
     
@@ -87,17 +87,22 @@ def benchmark_fps():
     
     # 7. Calculate Results
     total_time = end_time - start_time
-    avg_latency = total_time / num_iters
-    fps = 1.0 / avg_latency
+    total_samples = num_iters * batch_size
+    avg_latency_batch = total_time / num_iters
+    avg_latency_sample = total_time / total_samples
+    fps = 1.0 / avg_latency_sample
     
     print("\n" + "="*30)
     print("BENCHMARK RESULTS")
     print("="*30)
     print(f"Device:         {device}")
+    print(f"Batch Size:     {batch_size}")
     print(f"Iterations:     {num_iters}")
+    print(f"Total Samples:  {total_samples}")
     print(f"Total Time:     {total_time:.4f} s")
-    print(f"Avg Latency:    {avg_latency * 1000:.2f} ms per sample")
-    print(f"FPS:            {fps:.2f}")
+    print(f"Avg Latency/Batch:  {avg_latency_batch * 1000:.2f} ms")
+    print(f"Avg Latency/Sample: {avg_latency_sample * 1000:.2f} ms")
+    print(f"Throughput (FPS):   {fps:.2f}")
     print("="*30)
 
 if __name__ == '__main__':
