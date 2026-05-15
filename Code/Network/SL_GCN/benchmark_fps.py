@@ -9,6 +9,14 @@ from parser import get_parser
 def benchmark_fps():
     # 1. Get Arguments and Config
     parser = get_parser()
+    p = parser.parse_args()
+    
+    # load arg form config file
+    if p.config is not None:
+        with open(p.config, 'r', encoding='utf-8') as f:
+            default_arg = yaml.safe_load(f)
+        parser.set_defaults(**default_arg)
+
     args = parser.parse_args()
     
     # We must have a config to know the model architecture
