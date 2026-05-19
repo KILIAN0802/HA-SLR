@@ -73,15 +73,17 @@ def generate_derived_streams(data_dir):
         print(f"Hoàn thành xử lý cho tập {split.upper()}!\n")
 
 if __name__ == '__main__':
-    # Đường dẫn bạn vừa cung cấp trong ảnh
-    data_directory = "../data/Thi/processed/27_direct/" # Hãy sửa lại đường dẫn này nếu cần
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--data_dir', type=str, default='data/MultiVSL200/', help='Thư mục chứa file *_data_joint.npy')
+    args = parser.parse_args()
+    
+    data_directory = args.data_dir
     
     if not os.path.exists(data_directory):
-        # Fallback thử đường dẫn khác nếu đường dẫn trên sai
-        data_directory = "data/Thi/processed/27_direct/"
-        if not os.path.exists(data_directory):
-            data_directory = "data/processed/27_direct/"
-
-    print(f"Thư mục dữ liệu đang dùng: {data_directory}")
-    generate_derived_streams(data_directory)
-    print("Quá trình trích xuất Offline Kinematic Streams cho tất cả các tập đã HOÀN TẤT.")
+        print(f"Lỗi: Thư mục {data_directory} không tồn tại!")
+        print("Vui lòng truyền đúng đường dẫn bằng lệnh: python generate_derived_streams.py --data_dir đường/dẫn/đến/thư/mục")
+    else:
+        print(f"Thư mục dữ liệu đang dùng: {data_directory}")
+        generate_derived_streams(data_directory)
+        print("Quá trình trích xuất Offline Kinematic Streams cho tất cả các tập đã HOÀN TẤT.")
