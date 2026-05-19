@@ -8,13 +8,14 @@ splits: [test]
 # Cấu hình Feeder (Bộ nạp dữ liệu)
 feeder: feeders.feeder_cvpr.Feeder
 train_feeder_args:
-  data_path: data/processed/27_direct/train_data_joint.npy
-  label_path: data/processed/27_direct/train_label.pkl
+  data_path: data/data/Thi/processed/27_direct/train_data_joint.npy
+  label_path: data/data/Thi/processed/27_direct/train_label.pkl
   window_size: 150
   debug: False
+  use_jdma: True
 val_feeder_args:
-  data_path: data/processed/27_direct/val_data_joint.npy
-  label_path: data/processed/27_direct/val_label.pkl
+  data_path: data/data/Thi/processed/27_direct/val_data_joint.npy
+  label_path: data/data/Thi/processed/27_direct/val_label.pkl
   window_size: 150
   debug: False
 test_feeder_args:

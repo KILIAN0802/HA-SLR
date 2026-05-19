@@ -1,35 +1,47 @@
-work_dir: ./work_dir/MultiVSL200/Bone
+# Thư mục lưu kết quả huấn luyện
+work_dir: ./work_dir/MultiVSL200/Bone/baseline
 Experiment_name: MultiVSL200/Bone
+joint_sign: processed
+joint_type: 27_direct
+splits: [test]
+
+# Cấu hình Feeder (Bộ nạp dữ liệu)
 feeder: feeders.feeder_cvpr.Feeder
 train_feeder_args:
-  data_path: data/processed/27_direct/train_data_bone.npy
-  label_path: data/processed/27_direct/train_label.pkl
+  data_path: data/data/Thi/processed/27_direct/train_data_bone.npy
+  label_path: data/data/Thi/processed/27_direct/train_label.pkl
   window_size: 150
   debug: False
+  use_jdma: True
 val_feeder_args:
-  data_path: data/processed/27_direct/val_data_bone.npy
-  label_path: data/processed/27_direct/val_label.pkl
+  data_path: data/data/Thi/processed/27_direct/val_data_bone.npy
+  label_path: data/data/Thi/processed/27_direct/val_label.pkl
   window_size: 150
   debug: False
 test_feeder_args:
-  data_path: data/processed/27_direct/test_data_bone.npy
-  label_path: data/processed/27_direct/test_label.pkl
+  data_path: data/data/Thi/processed/27_direct/test_data_bone.npy
+  label_path: data/data/Thi/processed/27_direct/test_label.pkl
   window_size: 150
   debug: False
+
+# Cấu hình Mô hình (Model)
 model: model.hand_aware_sl_lgcn.Model
 model_args:
-  num_class: 200
-  num_point: 27
+  num_class: 200      # Thay đổi từ 226 sang 200 cho MultiVSL200
+  num_point: 27       # Đảm bảo là 27 khớp
   num_person: 1
-  graph: graph.sign_27.Graph
+  graph: graph.sign_27.Graph   # Sử dụng file đồ thị 27 khớp
   A_hands: graph.sign_27_A_hands.Graph
   graph_args:
     labeling_mode: spatial
 
+
+# Cấu hình Huấn luyện
 phase: train
 device: [0]
-batch_size: 32
+batch_size: 32        # Điều chỉnh tùy theo bộ nhớ GPU của bạn
 train_base_lr: 0.1
 test_base_lr: 0.1
-step: [50, 100, 150]
+step: [50, 100, 150]  # Các epoch sẽ giảm learning rate
 num_epoch: 200
+
