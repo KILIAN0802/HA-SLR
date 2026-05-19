@@ -177,4 +177,9 @@ def get_parser():
     parser.add_argument('--wandb-mode', type=str, default='online', help='online, offline, or disabled')
     parser.add_argument('--wandb-id', type=str, default='')
     parser.add_argument('--wandb-resume', type=str, default='auto')
+    
+    # CE-GCN additions
+    parser.add_argument('--clone_auto', type=str2bool, default=False, help='Automatically load Joint baseline weights for derivative streams (Bone, JM, BM).')
+    parser.add_argument('--evolve_mode', type=str2bool, default=False, help='If True, reduce base_lr by 10x and restrict max epochs for Evolve phase.')
+    
     return parser

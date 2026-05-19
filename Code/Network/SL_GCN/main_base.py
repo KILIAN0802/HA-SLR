@@ -267,10 +267,22 @@ class Processor():
         if output_device != -1:
             self.model = self.model.to(self.device)
 
-        # 4. Thiết lập hàm Loss
-        self.loss = nn.CrossEntropyLoss().to(self.device)
+        # 4. Thiết lập hàm Loss (Reduction='none' để hỗ trợ JDMA Soft Labels)
+        self.loss = nn.CrossEntropyLoss(reduction='none').to(self.device)
 
         # 5. Load trọng số (Weights)
+        if self.args.clone_auto and self.args.phase.lower() == 'train':
+            joint_dir = os.path.join("./work_dir", self.args.Experiment_name.split('/')[0], "Joint", "baseline")
+            if os.path.exists(joint_dir):
+                import glob
+                pt_files = glob.glob(os.path.join(joint_dir, "**", "checkpoints", "*_best_acc_*.pt"), recursive=True)
+                if pt_files:
+                    best_pt = max(pt_files, key=os.path.getmtime)
+                    self.args.weights = best_pt
+                    self.print_log(f'Clone & Evolve: Auto-cloned weights from {best_pt}')
+                else:
+                    self.print_log('Clone & Evolve: No Joint checkpoints found to clone.')
+
         if self.args.weights:
             self.print_log('Load weights from {}.'.format(self.args.weights))
             if '.pkl' in self.args.weights:
@@ -328,6 +340,12 @@ class Processor():
         """
         设置优化器optimizer 和 学习率调整策略
         """
+        if self.args.evolve_mode and self.args.phase.lower() == 'train':
+            self.args.base_lr = float(self.args.base_lr) / 10.0
+            self.print_log(f'Evolve Mode ON: Reduced base_lr to {self.args.base_lr} for fine-tuning.')
+            if self.args.num_epoch > 45:
+                self.args.num_epoch = 45
+                self.print_log('Evolve Mode ON: Restricted num_epoch to 45 to prevent catastrophic forgetting.')
 
         if self.args.optimizer == 'SGD':
 
@@ -482,7 +500,18 @@ class Processor():
             self.global_step += 1
             # get data
             data = Variable(data.float().to(self.device), requires_grad=False)
-            label = Variable(label.long().to(self.device), requires_grad=False)
+            
+            # Kiểm tra nếu dùng JDMA (Soft Labels)
+            is_jdma = isinstance(label, list) and len(label) == 3
+            if is_jdma:
+                label_1 = Variable(label[0].long().to(self.device), requires_grad=False)
+                label_2 = Variable(label[1].long().to(self.device), requires_grad=False)
+                lam = Variable(label[2].float().to(self.device), requires_grad=False)
+                eval_label = label_1 # Lấy nhãn chính để tính accuracy
+            else:
+                label = Variable(label.long().to(self.device), requires_grad=False)
+                eval_label = label
+                
             timer['dataloader'] += self.split_time()
 
             # forward
@@ -499,7 +528,14 @@ class Processor():
             else:
                 l1 = 0
 
-            loss = self.loss(output, label) + l1
+            # Tính Loss
+            if is_jdma:
+                # Tính loss mềm (Soft Target)
+                loss_1 = self.loss(output, label_1)
+                loss_2 = self.loss(output, label_2)
+                loss = (lam * loss_1 + (1 - lam) * loss_2).mean() + l1
+            else:
+                loss = self.loss(output, label).mean() + l1
 
             self.optimizer.zero_grad()
             loss.backward()
@@ -507,7 +543,7 @@ class Processor():
             timer['model'] += self.split_time()
 
             value, predict_label = torch.max(output.data, 1)
-            acc = torch.mean((predict_label == label.data).float())
+            acc = torch.mean((predict_label == eval_label.data).float())
             all_acc.append(acc.data.cpu().numpy())
             all_loss.append(loss.data.cpu().numpy())
 
@@ -576,7 +612,9 @@ class Processor():
                         l1 = l1.mean()
                     else:
                         l1 = 0
-                    loss = self.loss(output, label)
+                    
+                    # Trong lúc test, feeder không sinh nhãn mềm, label là tensor bình thường
+                    loss = self.loss(output, label).mean()
                     all_acc.append(output.data.cpu().numpy())
                     all_loss.append(loss.data.cpu().numpy())
 

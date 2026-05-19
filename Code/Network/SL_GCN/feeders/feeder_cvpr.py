@@ -20,9 +20,9 @@ flip_index = np.concatenate(([0,2,1,4,3,6,5],   # 前7个是body
 node_name = 27
 
 class Feeder(Dataset):
-    def __init__(self, data_path, label_path,
+        def __init__(self, data_path, label_path,
                  random_choose=False, random_shift=False, random_move=False,
-                 window_size=-1, normalization=False, debug=False, use_mmap=True, random_mirror=False, random_mirror_p=0.5, is_vector=False):
+                 window_size=-1, normalization=False, debug=False, use_mmap=True, random_mirror=False, random_mirror_p=0.5, is_vector=False, use_jdma=False):
         """
         :param data_path: 
         :param label_path: 
@@ -52,6 +52,7 @@ class Feeder(Dataset):
         self.random_mirror_p = random_mirror_p
         self.load_data()
         self.is_vector = is_vector
+        self.use_jdma = use_jdma
         if normalization:
             self.get_mean_map()
         print(len(self.label))
@@ -154,9 +155,39 @@ class Feeder(Dataset):
         if self.random_move:
             data_numpy = tools.random_move(data_numpy)
 
-        # print("data_numpy ", data_numpy.shape)    # (3, 100, 27, 1)
-        # import pdb
-        # pdb.set_trace()
+        # JDMA: Geometric Data Mixup Augmentation
+        if getattr(self, 'use_jdma', False):
+            # Select random index for mixing
+            index_2 = random.randint(0, len(self.label) - 1)
+            data_numpy_2 = np.array(self.data[index_2])
+            label_2 = self.label[index_2]
+            
+            # Apply same augmentations to data_numpy_2 for consistency (optional but recommended)
+            if self.random_choose: data_numpy_2 = tools.random_choose(data_numpy_2, self.window_size)
+            if self.random_mirror and random.random() > self.random_mirror_p:
+                data_numpy_2 = data_numpy_2[:,:,flip_index,:]
+                if self.is_vector: data_numpy_2[0,:,:,:] = - data_numpy_2[0,:,:,:]
+                else: data_numpy_2[0,:,:,:] = 512 - data_numpy_2[0,:,:,:]
+            if self.normalization:
+                if self.is_vector:
+                    data_numpy_2[0,:,0,:] = data_numpy_2[0,:,0,:] - data_numpy_2[0,:,0,0].mean(axis=0)
+                    data_numpy_2[1,:,0,:] = data_numpy_2[1,:,0,:] - data_numpy_2[1,:,0,0].mean(axis=0)
+                else:
+                    data_numpy_2[0,:,:,:] = data_numpy_2[0,:,:,:] - data_numpy_2[0,:,0,0].mean(axis=0)
+                    data_numpy_2[1,:,:,:] = data_numpy_2[1,:,:,:] - data_numpy_2[1,:,0,0].mean(axis=0)
+            if self.random_shift:
+                data_numpy_2[0,:,:,:] += random.random() * 20 - 10.0
+                data_numpy_2[1,:,:,:] += random.random() * 20 - 10.0
+            if self.random_move: data_numpy_2 = tools.random_move(data_numpy_2)
+
+            # Beta distribution for JDMA
+            alpha = 0.2
+            lam = np.random.beta(alpha, alpha)
+            data_numpy = lam * data_numpy + (1 - lam) * data_numpy_2
+            
+            # Return soft label tuple
+            return data_numpy, [label, label_2, lam], index
+
         return data_numpy, label, index
 
     def top_k(self, score, top_k):
