@@ -20,7 +20,7 @@ flip_index = np.concatenate(([0,2,1,4,3,6,5],   # 前7个是body
 node_name = 27
 
 class Feeder(Dataset):
-        def __init__(self, data_path, label_path,
+    def __init__(self, data_path, label_path,
                  random_choose=False, random_shift=False, random_move=False,
                  window_size=-1, normalization=False, debug=False, use_mmap=True, random_mirror=False, random_mirror_p=0.5, is_vector=False, use_jdma=False):
         """
