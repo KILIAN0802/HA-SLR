@@ -46,11 +46,22 @@ if __name__ == '__main__':
         
         return np.concatenate(results)
 
-    # Get scores for each model
-    r1_scores = get_scores(p.joint_model, p.joint_feeder, p.joint_weights, p.joint_test_feeder_args)
-    r2_scores = get_scores(p.bone_model, p.bone_feeder, p.bone_weights, p.bone_test_feeder_args)
-    r3_scores = get_scores(p.joint_motion_model, p.joint_motion_feeder, p.joint_motion_weights, p.joint_motion_test_feeder_args)
-    r4_scores = get_scores(p.bone_motion_model, p.bone_motion_feeder, p.bone_motion_weights, p.bone_motion_test_feeder_args)
+    import concurrent.futures
+
+    # Get scores for each model concurrently using ThreadPoolExecutor
+    tasks = [
+        (p.joint_model, p.joint_feeder, p.joint_weights, p.joint_test_feeder_args),
+        (p.bone_model, p.bone_feeder, p.bone_weights, p.bone_test_feeder_args),
+        (p.joint_motion_model, p.joint_motion_feeder, p.joint_motion_weights, p.joint_motion_test_feeder_args),
+        (p.bone_motion_model, p.bone_motion_feeder, p.bone_motion_weights, p.bone_motion_test_feeder_args)
+    ]
+
+    print("Đang tải và dự đoán đồng thời 4 mô hình đa luồng...")
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        futures = [executor.submit(get_scores, *task) for task in tasks]
+        results = [future.result() for future in futures]
+
+    r1_scores, r2_scores, r3_scores, r4_scores = results
 
     # Load labels
     with open(p.joint_test_feeder_args['label_path'], 'rb') as f:
