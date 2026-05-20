@@ -170,10 +170,10 @@ if __name__ == '__main__':
     
     # 2. Cập nhật đường dẫn tới 4 checkpoint
     weight_paths = [
-        'work_dir/MultiVSL200/Joint/bs32_f150_lr0.1_warmup0/2026-05-19_20-53-05/checkpoints/Joint_best_acc_116_6543.pt',
-        'work_dir/MultiVSL200/Bone/bs32_f150_lr0.1_warmup0/2026-05-19_22-24-43/checkpoints/Bone_best_acc_44_6419.pt',
-        'work_dir/MultiVSL200/Joint_Motion/bs32_f150_lr0.1_warmup0/2026-05-19_22-45-31/checkpoints/Joint_Motion_best_acc_30_2489.pt',
-        'work_dir/MultiVSL200/Bone_Motion/bs32_f150_lr0.1_warmup0/2026-05-19_23-06-18/checkpoints/Bone_Motion_best_acc_41_5226.pt'
+        # 'work_dir/MultiVSL200/Joint/bs32_f150_lr0.1_warmup0/2026-05-19_20-53-05/checkpoints/Joint_best_acc_116_6543.pt',
+        # 'work_dir/MultiVSL200/Bone/bs32_f150_lr0.1_warmup0/2026-05-19_22-24-43/checkpoints/Bone_best_acc_44_6419.pt',
+        # 'work_dir/MultiVSL200/Joint_Motion/bs32_f150_lr0.1_warmup0/2026-05-19_22-45-31/checkpoints/Joint_Motion_best_acc_30_2489.pt',
+        # 'work_dir/MultiVSL200/Bone_Motion/bs32_f150_lr0.1_warmup0/2026-05-19_23-06-18/checkpoints/Bone_Motion_best_acc_41_5226.pt'
     ]
     
     try:
