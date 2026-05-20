@@ -24,6 +24,7 @@ if __name__ == '__main__':
 
     # Function to run evaluation and get prediction scores
     def get_scores(model_name, feeder_name, weights_path, feeder_args):
+        import gc
         Model = import_class(model_name)
         Feeder = import_class(feeder_name)
         
@@ -31,9 +32,12 @@ if __name__ == '__main__':
         model.load_state_dict(torch.load(weights_path))
         model.eval()
         
+        # Sử dụng batch size an toàn khi test để tránh tràn VRAM GPU
+        batch_size = min(p.batch_size, 32)
+        
         data_loader = torch.utils.data.DataLoader(
             dataset=Feeder(**feeder_args),
-            batch_size=p.batch_size,
+            batch_size=batch_size,
             shuffle=False,
             num_workers=p.num_worker)
             
@@ -44,11 +48,14 @@ if __name__ == '__main__':
                 output = model(data)
             results.append(output.data.cpu().numpy())
         
+        # Giải phóng bộ nhớ GPU ngay lập tức
+        del model
+        torch.cuda.empty_cache()
+        gc.collect()
+        
         return np.concatenate(results)
 
-    import concurrent.futures
-
-    # Get scores for each model concurrently using ThreadPoolExecutor
+    # Get scores for each model sequentially to avoid CUDA OOM
     tasks = [
         (p.joint_model, p.joint_feeder, p.joint_weights, p.joint_test_feeder_args),
         (p.bone_model, p.bone_feeder, p.bone_weights, p.bone_test_feeder_args),
@@ -56,10 +63,12 @@ if __name__ == '__main__':
         (p.bone_motion_model, p.bone_motion_feeder, p.bone_motion_weights, p.bone_motion_test_feeder_args)
     ]
 
-    print("Đang tải và dự đoán đồng thời 4 mô hình đa luồng...")
-    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-        futures = [executor.submit(get_scores, *task) for task in tasks]
-        results = [future.result() for future in futures]
+    print("Đang tải và dự đoán tuần tự 4 mô hình để tránh tràn bộ nhớ GPU (CUDA OOM)...")
+    results = []
+    stream_names = ['Joint', 'Bone', 'Joint Motion', 'Bone Motion']
+    for i, task in enumerate(tasks):
+        print(f"\n--- Đang chạy mô hình luồng: {stream_names[i]} ---")
+        results.append(get_scores(*task))
 
     r1_scores, r2_scores, r3_scores, r4_scores = results
 
