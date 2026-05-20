@@ -44,29 +44,40 @@ def load_backbone(model_class_path, model_args, weight_path, device):
     Model = import_class(model_class_path)
     model = Model(**model_args).to(device)
     
+    path_to_load = None
     if os.path.exists(weight_path):
-        try:
-            ckpt = torch.load(weight_path, map_location=device)
-            if 'model_state_dict' in ckpt:
-                ckpt = ckpt['model_state_dict']
-            model.load_state_dict(ckpt)
-            print(f"-> Nạp thành công trọng số từ: {weight_path}")
-        except Exception as e:
-            print(f"-> Cảnh báo: Lỗi khi nạp weights từ {weight_path}: {e}. Khởi tạo ngẫu nhiên.")
+        path_to_load = weight_path
     else:
         # Thử kiểm tra đường dẫn tương đối khác
         alternative_path = weight_path.replace('Code/Network/SL_GCN/', '')
         if os.path.exists(alternative_path):
-            try:
-                ckpt = torch.load(alternative_path, map_location=device)
+            path_to_load = alternative_path
+            
+    if path_to_load is not None:
+        try:
+            ckpt = torch.load(path_to_load, map_location=device)
+            if isinstance(ckpt, dict):
                 if 'model_state_dict' in ckpt:
-                    ckpt = ckpt['model_state_dict']
-                model.load_state_dict(ckpt)
-                print(f"-> Nạp thành công trọng số (đường dẫn thay thế) từ: {alternative_path}")
-            except Exception as e:
-                print(f"-> Cảnh báo: Lỗi khi nạp weights thay thế từ {alternative_path}: {e}")
-        else:
-            print(f"-> Cảnh báo: Không tìm thấy checkpoint tại {weight_path}. Khởi tạo ngẫu nhiên.")
+                    state_dict = ckpt['model_state_dict']
+                elif 'state_dict' in ckpt:
+                    state_dict = ckpt['state_dict']
+                else:
+                    state_dict = ckpt
+            else:
+                state_dict = ckpt
+            
+            # Khử tiền tố 'module.' hoặc 'processor.model.' nếu có do train đa GPU
+            cleaned_state_dict = {}
+            for k, v in state_dict.items():
+                name = k.replace('module.', '').replace('processor.model.', '')
+                cleaned_state_dict[name] = v
+                
+            model.load_state_dict(cleaned_state_dict, strict=False)
+            print(f"-> Nạp thành công trọng số từ: {path_to_load}")
+        except Exception as e:
+            print(f"-> Cảnh báo: Lỗi khi nạp weights từ {path_to_load}: {e}. Khởi tạo ngẫu nhiên.")
+    else:
+        print(f"-> Cảnh báo: Không tìm thấy checkpoint tại {weight_path}. Khởi tạo ngẫu nhiên.")
             
     model.eval()
     for p in model.parameters():
@@ -164,9 +175,20 @@ def main():
                 
                 # Lan truyền xuôi qua 4 mô hình để lấy logit
                 logits_joint = model_joint(batch_data)
-                logits_bone  = model_bone(bone_data)
-                logits_jm    = model_jm(jm_data)
-                logits_bm    = model_bm(bm_data)
+                if isinstance(logits_joint, tuple):
+                    logits_joint = logits_joint[0]
+                    
+                logits_bone = model_bone(bone_data)
+                if isinstance(logits_bone, tuple):
+                    logits_bone = logits_bone[0]
+                    
+                logits_jm = model_jm(jm_data)
+                if isinstance(logits_jm, tuple):
+                    logits_jm = logits_jm[0]
+                    
+                logits_bm = model_bm(bm_data)
+                if isinstance(logits_bm, tuple):
+                    logits_bm = logits_bm[0]
                 
                 # Trích xuất Softmax logits của từng luồng
                 s_joint = torch.softmax(logits_joint, dim=-1)
