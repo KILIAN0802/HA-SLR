@@ -23,6 +23,31 @@ if __name__ == '__main__':
         if k not in p.__dict__ or p.__dict__[k] is None:
             p.__dict__[k] = default_arg[k]
 
+    def fix_path(p_str):
+        if isinstance(p_str, str) and p_str and not os.path.exists(p_str):
+            if os.path.isabs(p_str):
+                return p_str
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            rel_p = p_str[2:] if p_str.startswith('./') else p_str
+            candidate = os.path.normpath(os.path.join(base_dir, rel_p))
+            if os.path.exists(candidate):
+                return candidate
+        return p_str
+
+    # Fix weights paths
+    p.joint_weights = fix_path(p.joint_weights)
+    p.bone_weights = fix_path(p.bone_weights)
+    p.joint_motion_weights = fix_path(p.joint_motion_weights)
+    p.bone_motion_weights = fix_path(p.bone_motion_weights)
+
+    # Fix feeder paths
+    for feeder_args in [p.joint_test_feeder_args, p.bone_test_feeder_args, p.joint_motion_test_feeder_args, p.bone_motion_test_feeder_args]:
+        if feeder_args is not None:
+            if 'data_path' in feeder_args:
+                feeder_args['data_path'] = fix_path(feeder_args['data_path'])
+            if 'label_path' in feeder_args:
+                feeder_args['label_path'] = fix_path(feeder_args['label_path'])
+
     # Function to run evaluation and get prediction scores
     def get_scores(model_name, feeder_name, weights_path, feeder_args):
         Model = import_class(model_name)
