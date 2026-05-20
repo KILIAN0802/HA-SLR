@@ -41,21 +41,23 @@ def generate_derived_streams(data_dir):
         bone_conn[0] = 0
 
         print("Đang tạo luồng Bone...")
-        # Chuẩn hóa độ dài (L2 Normalization) dọc theo trục tọa độ (C=3, axis 1) để biến thành Vector Đơn Vị Chỉ Hướng Xương
+        # L2 Normalization dọc theo trục tọa độ C=3 (axis=1) để biến thành Vector Đơn Vị Chỉ Hướng Xương
         bone_data = joint_data - joint_data[:, :, :, bone_conn, :]
-        bone_data = bone_data / (np.linalg.norm(bone_data, axis=1, keepdims=True) + 1e-6)
+        norm = np.linalg.norm(bone_data, axis=1, keepdims=True)
+        # Sử dụng np.where tránh lỗi chia cho 0 và giữ khớp gốc (Root node v=0) bằng 0.0
+        bone_data = np.where(norm > 1e-6, bone_data / norm, 0.0)
             
         print("Đang tạo luồng Joint Motion...")
         joint_motion_data = np.zeros_like(joint_data)
         joint_motion_data[:, :, :-1, :, :] = joint_data[:, :, 1:, :, :] - joint_data[:, :, :-1, :, :]
-        # Cơ chế sao chép biên (Border Replication) để bảo toàn dòng chảy thời gian
-        joint_motion_data[:, :, -1, :, :] = joint_motion_data[:, :, -2, :, :]
+        # Cơ chế sao chép biên (Border Replication) tại khung hình cuối T-1 để bảo toàn dòng chảy thời gian
+        joint_motion_data[:, :, T - 1, :, :] = joint_motion_data[:, :, T - 2, :, :]
 
         print("Đang tạo luồng Bone Motion...")
         bone_motion_data = np.zeros_like(bone_data)
         bone_motion_data[:, :, :-1, :, :] = bone_data[:, :, 1:, :, :] - bone_data[:, :, :-1, :, :]
-        # Cơ chế sao chép biên (Border Replication) để bảo toàn dòng chảy thời gian
-        bone_motion_data[:, :, -1, :, :] = bone_motion_data[:, :, -2, :, :]
+        # Cơ chế sao chép biên (Border Replication) tại khung hình cuối T-1 để bảo toàn dòng chảy thời gian
+        bone_motion_data[:, :, T - 1, :, :] = bone_motion_data[:, :, T - 2, :, :]
 
         # 2. Lưu các luồng dữ liệu mới
         bone_file = os.path.join(data_dir, f'{split}_data_bone.npy')

@@ -4,33 +4,24 @@ import numpy as np
 import concurrent.futures
 from model.utils import import_class
 
-class AdaptiveFusionModule(nn.Module):
+class AdaptiveFusionGate(nn.Module):
     def __init__(self, num_classes=200):
-        super(AdaptiveFusionModule, self).__init__()
-        # Gating network: nén 4 logit vectors của 4 luồng
-        # Input size: 4 * num_classes
+        super(AdaptiveFusionGate, self).__init__()
+        # Gating network: Nhánh phụ siêu nhỏ gồm 2 tầng tuyến tính và kết thúc bằng Softmax
+        # Input size: 4 * num_classes (nối các vector softmax probabilities của 4 luồng)
         self.fc = nn.Sequential(
             nn.Linear(4 * num_classes, 64),
             nn.ReLU(),
-            nn.Linear(64, 4)
+            nn.Linear(64, 4),
+            nn.Softmax(dim=-1)
         )
         
-    def forward(self, logits_list):
-        # logits_list: list 4 tensor shape (N, num_classes)
-        # Nối đặc trưng lại dọc theo chiều cuối: (N, 4 * num_classes)
-        x = torch.cat(logits_list, dim=-1)
-        # MLP sinh ra raw weights
-        weights = self.fc(x)
-        # Kích hoạt Softmax để tổng trọng số động bằng 1.0: (N, 4)
-        alpha = torch.softmax(weights, dim=-1)
-        
-        # Logits_final = alpha_1 * L_1 + alpha_2 * L_2 + alpha_3 * L_3 + alpha_4 * L_4
-        logits_stacked = torch.stack(logits_list, dim=0)  # (4, N, num_classes)
-        alpha_unsqueezed = alpha.t().unsqueeze(-1)  # (4, N, 1)
-        
-        # Nhân trọng số quyết định động theo từng mẫu
-        fused_logits = (logits_stacked * alpha_unsqueezed).sum(dim=0)
-        return fused_logits, alpha
+    def forward(self, x):
+        # x: (N, 4 * num_classes)
+        return self.fc(x)
+
+# Alias để giữ khả năng tương thích ngược hoàn hảo
+AdaptiveFusionModule = AdaptiveFusionGate
 
 class CE_GCN_Pipeline:
     def __init__(self, model_class_path, model_args, weight_paths, fusion_weight_path=None, device='cuda:0'):
@@ -39,7 +30,7 @@ class CE_GCN_Pipeline:
         - model_class_path: Đường dẫn import mạng, vd: 'model.hand_aware_sl_lgcn.Model'
         - model_args: Dict chứa các tham số khởi tạo mạng
         - weight_paths: List 4 đường dẫn [Joint_pt, Bone_pt, JM_pt, BM_pt]
-        - fusion_weight_path: Trọng số của AdaptiveFusionModule
+        - fusion_weight_path: Đường dẫn lưu trọng số của AdaptiveFusionGate
         """
         self.device = torch.device(device if torch.cuda.is_available() else 'cpu')
         
@@ -77,41 +68,42 @@ class CE_GCN_Pipeline:
         for (i, j) in inward_ori_index:
             self.bone_conn[j - 5] = i - 5
             
-        # 3. Tích hợp bộ hợp nhất trọng số tự học AdaptiveFusionModule
+        # 3. Tích hợp bộ hợp nhất trọng số tự học AdaptiveFusionGate
         num_classes = model_args.get('num_class', 200)
-        self.fusion_module = AdaptiveFusionModule(num_classes=num_classes).to(self.device)
+        self.fusion_gate = AdaptiveFusionGate(num_classes=num_classes).to(self.device)
         if fusion_weight_path:
             try:
                 ckpt = torch.load(fusion_weight_path, map_location=self.device)
                 if 'model_state_dict' in ckpt:
                     ckpt = ckpt['model_state_dict']
-                self.fusion_module.load_state_dict(ckpt)
+                self.fusion_gate.load_state_dict(ckpt)
                 print(f"[Fusion] Loaded weights từ: {fusion_weight_path}")
             except Exception as e:
                 print(f"[Fusion] Không thể nạp weights: {e}")
-        self.fusion_module.eval()
+        self.fusion_gate.eval()
         self.last_weights = None
 
     def _compute_bone(self, joint_tensor):
-        """ Tính tensor Bone trực tiếp trên VRAM (Khử nhiễu biên độ, Vector hóa 100%) """
+        """ Tính toán tensor Bone trực tiếp trên VRAM bằng phép toán ma trận 100% không dùng vòng lặp """
         # joint_tensor shape: (N, C, T, V, M)
-        # Vectorized subtraction using advanced indexing (Không sử dụng vòng lặp python)
         bone = joint_tensor - joint_tensor[:, :, :, self.bone_conn, :]
         # Chuẩn hóa L2 Normalization dọc theo trục tọa độ (C=3, tức dim 1)
-        bone_normalized = bone / (torch.norm(bone, p=2, dim=1, keepdim=True) + 1e-6)
+        norm = torch.norm(bone, p=2, dim=1, keepdim=True)
+        # Sử dụng torch.where tránh chia cho 0 và giữ root node v=0 là zero
+        bone_normalized = torch.where(norm > 1e-6, bone / norm, torch.zeros_like(bone))
         return bone_normalized
 
     def _compute_motion(self, x):
-        """ Tính sai phân thời gian bậc nhất (Không sử dụng vòng lặp, Sao chép biên Border Replication) """
+        """ Tính sai phân thời gian bậc nhất bằng ma trận và cơ chế sao chép biên (Border Replication) """
         # x shape: (N, C, T, V, M)
         motion = torch.zeros_like(x)
         motion[:, :, :-1, :, :] = x[:, :, 1:, :, :] - x[:, :, :-1, :, :]
-        # Cơ chế sao chép biên (Border Replication) để bảo toàn dòng chảy thời gian
+        # Cơ chế sao chép biên (Border Replication) gán khung hình cuối bằng khung hình liền trước nó
         motion[:, :, -1, :, :] = motion[:, :, -2, :, :]
         return motion
 
     def _run_single_model(self, model, data):
-        """ Hàm bao bọc để chạy forward 1 mô hình """
+        """ Hàm bao bọc chạy forward 1 mô hình độc lập """
         with torch.no_grad():
             output = model(data)
             if isinstance(output, tuple):
@@ -125,7 +117,7 @@ class CE_GCN_Pipeline:
         """
         joint_frame = joint_frame.to(self.device)
         
-        # Tự động tính toán trực tiếp ra 3 luồng còn lại ngay trên VRAM (Vectorized)
+        # Tự động tính toán trực tiếp ra 3 luồng còn lại ngay trên VRAM (Vectorized 100%)
         bone_frame = self._compute_bone(joint_frame)
         jm_frame = self._compute_motion(joint_frame)
         bm_frame = self._compute_motion(bone_frame)
@@ -142,14 +134,26 @@ class CE_GCN_Pipeline:
             
         # Đưa qua bộ hợp nhất trọng số tự học dynamic gating
         with torch.no_grad():
-            fused_logits, weights = self.fusion_module(results)
-            fused_scores = torch.softmax(fused_logits, dim=-1)
+            # Tính Softmax của từng luồng
+            softmax_logits = [torch.softmax(r, dim=-1) for r in results]
             
-        self.last_weights = weights
-        pred_class = torch.argmax(fused_scores, dim=1).item()
-        confidence = torch.max(fused_scores).item()
+            # Gộp (nối) các softmax vector lại để làm đầu vào cho AdaptiveFusionGate
+            gate_input = torch.cat(softmax_logits, dim=-1)  # Shape: (N, 4 * num_classes)
+            
+            # Tính toán trọng số alpha động [a1, a2, a3, a4] biến thiên theo từng video test
+            alpha = self.fusion_gate(gate_input)  # Shape: (N, 4)
+            
+            # Nhân ma trận trọng số động với Softmax logits của từng luồng trước khi cộng hợp lại
+            softmax_stacked = torch.stack(softmax_logits, dim=0)  # Shape: (4, N, num_classes)
+            alpha_unsqueezed = alpha.t().unsqueeze(-1)  # Shape: (4, N, 1)
+            
+            fused_predictions = (softmax_stacked * alpha_unsqueezed).sum(dim=0)  # Shape: (N, num_classes)
+            
+        self.last_weights = alpha
+        pred_class = torch.argmax(fused_predictions, dim=1).item()
+        confidence = torch.max(fused_predictions).item()
         
-        return pred_class, confidence, fused_scores
+        return pred_class, confidence, fused_predictions
 
 # Test run (Dummy code)
 if __name__ == '__main__':
@@ -164,12 +168,12 @@ if __name__ == '__main__':
         'graph_args': {'labeling_mode': 'spatial'}
     }
     
-    # 2. Cập nhật đường dẫn tới 4 checkpoint vừa train xong
+    # 2. Cập nhật đường dẫn tới 4 checkpoint
     weight_paths = [
-        'Code/Network/SL_GCN/work_dir/MultiVSL200/Joint/bs32_f150_lr0.1_warmup0/2026-05-19_20-53-05/checkpoints/Joint_best_acc_116_6543.pt',
-        'Code/Network/SL_GCN/work_dir/MultiVSL200/Bone/bs32_f150_lr0.1_warmup0/2026-05-19_22-24-43/checkpoints/Bone_best_acc_44_6419.pt',
-        'Code/Network/SL_GCN/work_dir/MultiVSL200/Joint_Motion/bs32_f150_lr0.1_warmup0/2026-05-19_22-45-31/checkpoints/Joint_Motion_best_acc_30_2489.pt',
-        'Code/Network/SL_GCN/work_dir/MultiVSL200/Bone_Motion/bs32_f150_lr0.1_warmup0/2026-05-19_23-06-18/checkpoints/Bone_Motion_best_acc_41_5226.pt'
+        'work_dir/MultiVSL200/Joint/bs32_f150_lr0.1_warmup0/2026-05-19_20-53-05/checkpoints/Joint_best_acc_116_6543.pt',
+        'work_dir/MultiVSL200/Bone/bs32_f150_lr0.1_warmup0/2026-05-19_22-24-43/checkpoints/Bone_best_acc_44_6419.pt',
+        'work_dir/MultiVSL200/Joint_Motion/bs32_f150_lr0.1_warmup0/2026-05-19_22-45-31/checkpoints/Joint_Motion_best_acc_30_2489.pt',
+        'work_dir/MultiVSL200/Bone_Motion/bs32_f150_lr0.1_warmup0/2026-05-19_23-06-18/checkpoints/Bone_Motion_best_acc_41_5226.pt'
     ]
     
     try:
@@ -185,9 +189,9 @@ if __name__ == '__main__':
         
     except Exception as e:
         import traceback
-        print(f"Chưa thể load mô hình vì cần file trọng số thực: {e}")
+        print(f"Chưa thể load mô hình bằng trọng số thực vì cần file trọng số thực: {e}")
         traceback.print_exc()
-        # Chạy kiểm thử cấu trúc FusionModule & Vectorized Operations độc lập với file checkpoint thực
+        # Chạy kiểm thử cấu trúc Fusion Module & Vectorized Operations độc lập với file checkpoint thực
         print("\n--- BẮT ĐẦU CHẠY KIỂM THỬ KHÔNG CẦN CHECKPOINT THỰC ---")
         try:
             # Khởi tạo pipeline không load trọng số thực

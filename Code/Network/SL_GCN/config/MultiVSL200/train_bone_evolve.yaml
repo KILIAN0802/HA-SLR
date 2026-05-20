@@ -1,0 +1,61 @@
+# Thư mục lưu kết quả huấn luyện
+work_dir: ./work_dir/MultiVSL200/Bone/evolve
+Experiment_name: MultiVSL200/Bone_Evolve
+joint_sign: processed
+joint_type: 27_direct
+splits: [test]
+
+# Cấu hình Feeder (Bộ nạp dữ liệu)
+feeder: feeders.feeder_cvpr.Feeder
+train_feeder_args:
+  data_path: data/data/Thi/processed/27_direct/train_data_bone.npy
+  label_path: data/data/Thi/processed/27_direct/train_label.pkl
+  window_size: 150
+  debug: False
+  use_jdma: True
+val_feeder_args:
+  data_path: data/data/Thi/processed/27_direct/val_data_bone.npy
+  label_path: data/data/Thi/processed/27_direct/val_label.pkl
+  window_size: 150
+  debug: False
+test_feeder_args:
+  data_path: data/data/Thi/processed/27_direct/test_data_bone.npy
+  label_path: data/data/Thi/processed/27_direct/test_label.pkl
+  window_size: 150
+  debug: False
+
+# Cấu hình Mô hình (Model)
+model: model.hand_aware_sl_lgcn.Model
+model_args:
+  num_class: 200      # Số lượng nhãn phân lớp của tập dữ liệu MultiVSL200
+  num_point: 27       # Đồ thị 27 khớp xương của bàn tay
+  num_person: 1
+  graph: graph.sign_27.Graph   # Sử dụng file đồ thị 27 khớp
+  A_hands: graph.sign_27_A_hands.Graph
+  graph_args:
+    labeling_mode: spatial
+
+# Cấu hình Huấn luyện Evolve (Học thích ứng thông tin luồng xương từ luồng khớp Joint)
+phase: train
+device: [0]
+batch_size: 32
+
+# 1. Trỏ mặc định tới file checkpoint tốt nhất của luồng Joint để thực hiện Clone
+weights: ./work_dir/MultiVSL200/Joint/bs32_f150_lr0.1_warmup0/2026-05-19_20-53-05/checkpoints/Joint_best_acc_116_6543.pt
+
+# 2. Hạ thấp nghiêm ngặt tốc độ học để tránh phá hủy không gian đặc trưng mạng (Catastrophic Forgetting)
+train_base_lr: 0.005
+test_base_lr: 0.005
+
+# 3. Cấu hình Scheduler CosineAnnealingLR để suy giảm mịn học phí theo epoch
+scheduler: CosineAnnealingLR
+nested_lr: CosineAnnealingLR
+lr_decay_type: cosine
+
+# 4. Đặt only_train_epoch = 0 để mở khóa huấn luyện thích ứng toàn bộ mạng ngay từ đầu
+only_train_epoch: 0
+
+# Kích hoạt Evolve Mode của CE-GCN
+evolve_mode: true
+num_epoch: 45
+weight_decay: 0.0005
