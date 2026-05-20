@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(0, 'Code/Network/SL_GCN')
+sys.path.insert(0, './')
 import torch
 import yaml
 import pickle

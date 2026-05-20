@@ -8,11 +8,11 @@ joint_model_args:
   A_hands: graph.sign_27_A_hands.Graph
   graph_args:
     labeling_mode: spatial
-joint_weights: Code/Network/SL_GCN/work_dir/MultiVSL200/Joint/bs32_f150_lr0.1_warmup0_EarlyStop20/2026-05-12_06-45-56/checkpoints/Joint_best_acc_60_6419.pt
+joint_weights: work_dir/MultiVSL200-27kpt-Thi-Train/Joint/bs32_f150_lr0.1_warmup0_EarlyStop20/2026-05-12_06-45-56/checkpoints/Joint_best_acc_60_6419.pt
 joint_feeder: feeders.feeder_cvpr.Feeder
 joint_test_feeder_args:
-  data_path: Code/Network/SL_GCN/data/data/Thi/processed/27_direct/test_data_joint.npy
-  label_path: Code/Network/SL_GCN/data/data/Thi/processed/27_direct/test_label.pkl
+  data_path: data/data/Thi/processed/27_direct/test_data_joint.npy
+  label_path: data/data/Thi/processed/27_direct/test_label.pkl
   window_size: 150
 
 # Bone
@@ -25,11 +25,11 @@ bone_model_args:
   A_hands: graph.sign_27_A_hands.Graph
   graph_args:
     labeling_mode: spatial
-bone_weights: Code/Network/SL_GCN/work_dir/MultiVSL200/Bone/bs32_f150_lr0.1_warmup0_EarlyStop20/2026-05-12_07-53-53/checkpoints/Bone_best_acc_66_7448.pt
+bone_weights: work_dir/MultiVSL200-27kpt-Thi-Train/Bone/bs32_f150_lr0.1_warmup0_EarlyStop20/2026-05-12_07-53-53/checkpoints/Bone_best_acc_66_7448.pt
 bone_feeder: feeders.feeder_cvpr.Feeder
 bone_test_feeder_args:
-  data_path: Code/Network/SL_GCN/data/data/Thi/processed/27_direct/test_data_bone.npy
-  label_path: Code/Network/SL_GCN/data/data/Thi/processed/27_direct/test_label.pkl
+  data_path: data/data/Thi/processed/27_direct/test_data_bone.npy
+  label_path: data/data/Thi/processed/27_direct/test_label.pkl
   window_size: 150
 
 # Joint Motion
@@ -42,11 +42,11 @@ joint_motion_model_args:
   A_hands: graph.sign_27_A_hands.Graph
   graph_args:
     labeling_mode: spatial
-joint_motion_weights: Code/Network/SL_GCN/work_dir/MultiVSL200/Joint_Motion/bs32_f150_lr0.1_warmup0_EarlyStop20/2026-05-12_08-27-24/checkpoints/Joint_Motion_best_acc_42_4876.pt
+joint_motion_weights: work_dir/MultiVSL200-27kpt-Thi-Train/Joint_Motion/bs32_f150_lr0.1_warmup0_EarlyStop20/2026-05-12_08-27-24/checkpoints/Joint_Motion_best_acc_42_4876.pt
 joint_motion_feeder: feeders.feeder_cvpr.Feeder
 joint_motion_test_feeder_args:
-  data_path: Code/Network/SL_GCN/data/data/Thi/processed/27_direct/test_data_joint_motion.npy
-  label_path: Code/Network/SL_GCN/data/data/Thi/processed/27_direct/test_label.pkl
+  data_path: data/data/Thi/processed/27_direct/test_data_joint_motion.npy
+  label_path: data/data/Thi/processed/27_direct/test_label.pkl
   window_size: 150
 
 # Bone Motion
@@ -59,9 +59,9 @@ bone_motion_model_args:
   A_hands: graph.sign_27_A_hands.Graph
   graph_args:
     labeling_mode: spatial
-bone_motion_weights: Code/Network/SL_GCN/work_dir/MultiVSL200/Bone_Motion/bs32_f150_lr0.1_warmup0_EarlyStop20/2026-05-12_08-49-35/checkpoints/Bone_Motion_best_acc_45_5617.pt
+bone_motion_weights: work_dir/MultiVSL200-27kpt-Thi-Train/Bone_Motion/bs32_f150_lr0.1_warmup0_EarlyStop20/2026-05-12_08-49-35/checkpoints/Bone_Motion_best_acc_45_5617.pt
 bone_motion_feeder: feeders.feeder_cvpr.Feeder
 bone_motion_test_feeder_args:
-  data_path: Code/Network/SL_GCN/data/data/Thi/processed/27_direct/test_data_bone_motion.npy
-  label_path: Code/Network/SL_GCN/data/data/Thi/processed/27_direct/test_label.pkl
+  data_path: data/data/Thi/processed/27_direct/test_data_bone_motion.npy
+  label_path: data/data/Thi/processed/27_direct/test_label.pkl
   window_size: 150
