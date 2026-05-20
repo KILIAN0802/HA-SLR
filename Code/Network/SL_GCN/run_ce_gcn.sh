@@ -20,7 +20,7 @@ python -u main_base.py \
   --config config/MultiVSL200/train_joint.yaml \
   --use-wandb True \
   --wandb-project "$PROJECT_NAME" \
-  --wandb-run-name MultiVSL200_Joint_Baseline
+  --wandb-run-name MultiVSL200_Joint_Baseline-1
 
 echo "=========================================================="
 echo "GIAI ĐOẠN 2 & 3: CLONE & EVOLVE CHO LUỒNG BONE"
@@ -31,7 +31,7 @@ python -u main_base.py \
   --evolve_mode True \
   --use-wandb True \
   --wandb-project "$PROJECT_NAME" \
-  --wandb-run-name MultiVSL200_Bone_Evolve
+  --wandb-run-name MultiVSL200_Bone_Evolve-1
 
 echo "=========================================================="
 echo "GIAI ĐOẠN 2 & 3: CLONE & EVOLVE CHO LUỒNG JOINT MOTION"
@@ -42,7 +42,7 @@ python -u main_base.py \
   --evolve_mode True \
   --use-wandb True \
   --wandb-project "$PROJECT_NAME" \
-  --wandb-run-name MultiVSL200_JointMotion_Evolve
+  --wandb-run-name MultiVSL200_JointMotion_Evolve-1
 
 echo "=========================================================="
 echo "GIAI ĐOẠN 2 & 3: CLONE & EVOLVE CHO LUỒNG BONE MOTION"
@@ -53,7 +53,7 @@ python -u main_base.py \
   --evolve_mode True \
   --use-wandb True \
   --wandb-project "$PROJECT_NAME" \
-  --wandb-run-name MultiVSL200_BoneMotion_Evolve
+  --wandb-run-name MultiVSL200_BoneMotion_Evolve-1
 
 echo "=========================================================="
 echo "GIAI ĐOẠN 4: TỰ ĐỘNG TÌM CHECKPOINT TỐT NHẤT VÀ HUẤN LUYỆN ADAPTIVE FUSION GATE"
