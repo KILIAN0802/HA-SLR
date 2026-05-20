@@ -156,7 +156,8 @@ class Feeder(Dataset):
             data_numpy = tools.random_move(data_numpy)
 
         # JDMA: Geometric Data Mixup Augmentation
-        if getattr(self, 'use_jdma', False):
+        # Restricted to Joint and Bone coordinate spaces (disabled for Motion streams to avoid Ghost Trajectories)
+        if getattr(self, 'use_jdma', False) and "motion" not in self.data_path.lower():
             # Select random index for mixing
             index_2 = random.randint(0, len(self.label) - 1)
             data_numpy_2 = np.array(self.data[index_2])
@@ -180,8 +181,8 @@ class Feeder(Dataset):
                 data_numpy_2[1,:,:,:] += random.random() * 20 - 10.0
             if self.random_move: data_numpy_2 = tools.random_move(data_numpy_2)
 
-            # Beta distribution for JDMA
-            alpha = 0.2
+            # Narrow Beta distribution for JDMA (alpha = 0.1) to mix only ~10% geometry noise
+            alpha = 0.1
             lam = np.random.beta(alpha, alpha)
             data_numpy = lam * data_numpy + (1 - lam) * data_numpy_2
             
