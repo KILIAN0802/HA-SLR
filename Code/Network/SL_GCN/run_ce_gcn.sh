@@ -3,8 +3,7 @@
 # Tự động dừng script nếu có bước nào bị lỗi
 set -e
 
-# Đặt chế độ WandB thành offline để tránh lỗi nghẽn mạng/timeout 90s trên máy trạm
-# Bạn vẫn lưu được log cục bộ và có thể sync sau bằng lệnh: wandb sync <thư_mục_run>
+# Cấu hình W&B ở chế độ offline để tránh lỗi timeout do mạng kết nối từ máy trạm đến server W&B chập chờn
 export WANDB_MODE=offline
 
 PROJECT_NAME="HA-SLR-CEGCN"
