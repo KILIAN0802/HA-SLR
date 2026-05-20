@@ -4,15 +4,14 @@ from tqdm import tqdm
 import glob
 
 def generate_derived_streams(data_dir):
-    """
-    Sinh các luồng dữ liệu Động học (Bone, Joint Motion, Bone Motion) từ Joint data.
-    Tự động quét và xử lý tất cả các tập (train, val, test) có trong data_dir.
-    """
     joint_files = glob.glob(os.path.join(data_dir, "*_data_joint.npy"))
     
     if not joint_files:
         print(f"Lỗi: Không tìm thấy file *_data_joint.npy nào trong thư mục {data_dir}")
         return
+    
+    output_dir = os.path.join(data_dir, 'derived')
+    os.makedirs(output_dir, exist_ok=True)
 
     for joint_file in joint_files:
         # Tách tên tập (train, val, hoặc test)
@@ -60,9 +59,10 @@ def generate_derived_streams(data_dir):
         bone_motion_data[:, :, T - 1, :, :] = bone_motion_data[:, :, T - 2, :, :]
 
         # 2. Lưu các luồng dữ liệu mới
-        bone_file = os.path.join(data_dir, f'{split}_data_bone.npy')
-        joint_motion_file = os.path.join(data_dir, f'{split}_data_joint_motion.npy')
-        bone_motion_file = os.path.join(data_dir, f'{split}_data_bone_motion.npy')
+
+        bone_file = os.path.join(output_dir, f'{split}_data_bone.npy')
+        joint_motion_file = os.path.join(output_dir, f'{split}_data_joint_motion.npy')
+        bone_motion_file = os.path.join(output_dir, f'{split}_data_bone_motion.npy')
 
         print(f"Đang lưu: {bone_file}")
         np.save(bone_file, bone_data)
