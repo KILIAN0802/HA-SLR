@@ -151,7 +151,7 @@ class Processor():
             'name': self.args.wandb_run_name or os.path.basename(self.args.work_dir),
             'group': self.args.wandb_group or self.args.Experiment_name,
             'tags': self.args.wandb_tags or None,
-            'mode': self.args.wandb_mode,
+            'mode': os.environ.get('WANDB_MODE') or self.args.wandb_mode,
             'resume': self.args.wandb_resume,
         }
         if self.args.wandb_entity:
