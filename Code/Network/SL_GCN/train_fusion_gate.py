@@ -148,8 +148,8 @@ def main():
     fusion_gate = AdaptiveFusionGate(num_classes=args.num_classes).to(device)
     optimizer = optim.Adam(fusion_gate.parameters(), lr=args.lr, weight_decay=1e-5)
     
-    # Định nghĩa NLL Loss trên log-probability của giá trị Softmax kết hợp
-    criterion = nn.NLLLoss()
+    # Định nghĩa CrossEntropyLoss trên log-probability của giá trị Softmax kết hợp
+    criterion = nn.CrossEntropyLoss()
     
     best_acc = 0.0
     os.makedirs(os.path.dirname(args.save_path) or '.', exist_ok=True)
@@ -209,9 +209,8 @@ def main():
             # Fused probability distribution
             fused_probs = (softmax_stacked * alpha_unsqueezed).sum(dim=0)
             
-            # Tính toán hàm lỗi
-            log_fused_probs = torch.log(fused_probs + 1e-15)
-            loss = criterion(log_fused_probs, batch_label)
+            # CrossEntropyLoss trong PyTorch yêu cầu đầu vào dạng log ẩn, tính toán trực tiếp từ phân phối xác suất hợp nhất:
+            loss = criterion(torch.log(fused_probs + 1e-8), batch_label)
             
             optimizer.zero_grad()
             loss.backward()
