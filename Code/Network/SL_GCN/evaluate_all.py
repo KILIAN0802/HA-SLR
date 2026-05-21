@@ -15,6 +15,15 @@ from parser import get_parser
 from model.utils import import_class
 from online_inference_pipeline import AdaptiveFusionGate
 
+# Cấu hình tường minh đường dẫn Checkpoint chuẩn cho từng luồng
+APPROVED_CHECKPOINTS = {
+    'joint': 'work_dir/MultiVSL200/Joint/bs32_f150_lr0.1_warmup0/.../Joint_best_acc_116_6543.pt', # File 87.81% của bạn
+    'bone': 'work_dir/MultiVSL200/Bone/YOUR_NEW_EVOLVE_PATH/Bone_best_acc.pt',
+    'joint_motion': 'work_dir/MultiVSL200/Joint_Motion/YOUR_NEW_EVOLVE_PATH/Joint_Motion_best.pt',
+    'bone_motion': 'work_dir/MultiVSL200/Bone_Motion/YOUR_NEW_EVOLVE_PATH/Bone_Motion_best.pt',
+    'fusion_gate': 'work_dir/fusion_gate_best.pt'
+}
+
 def find_best_checkpoint(stream_name):
     """Tự động tìm kiếm file checkpoint có độ chính xác cao nhất (*_best_acc_*.pt)"""
     search_patterns = [
@@ -28,12 +37,35 @@ def find_best_checkpoint(stream_name):
     for pattern in search_patterns:
         found_files.extend(glob.glob(pattern, recursive=True))
         
-    if not found_files:
+    filtered_files = []
+    for f in found_files:
+        norm_f = f.replace('\\', '/')
+        basename = os.path.basename(f)
+        
+        if stream_name == 'Joint':
+            is_prefix = basename.startswith('Joint') or basename.startswith('train_joint')
+            is_folder = 'Joint/' in norm_f or 'train_joint/' in norm_f
+            if (is_prefix or is_folder) and 'Joint_Motion' not in norm_f:
+                filtered_files.append(f)
+        elif stream_name == 'Bone':
+            is_folder = 'Bone/' in norm_f or 'train_bone_evolve/' in norm_f
+            if is_folder and 'Bone_Motion' not in norm_f:
+                filtered_files.append(f)
+        elif stream_name == 'Joint_Motion':
+            if 'Joint_Motion' in norm_f:
+                filtered_files.append(f)
+        elif stream_name == 'Bone_Motion':
+            if 'Bone_Motion' in norm_f:
+                filtered_files.append(f)
+        else:
+            filtered_files.append(f)
+            
+    if not filtered_files:
         return None
         
     # Lấy checkpoint mới nhất dựa trên thời gian sửa đổi (modification time)
-    found_files.sort(key=os.path.getmtime)
-    return found_files[-1]
+    filtered_files.sort(key=os.path.getmtime)
+    return filtered_files[-1]
 
 def get_scores(model_name, feeder_name, weights_path, feeder_args, model_args, batch_size=32, num_workers=2):
     """Chạy suy luận trên tập test để lấy logits thô của một luồng"""
@@ -114,26 +146,46 @@ def main():
         'Bone Motion': 'Bone_Motion'
     }
     
+    approved_keys = {
+        'Joint': 'joint',
+        'Bone': 'bone',
+        'Joint Motion': 'joint_motion',
+        'Bone Motion': 'bone_motion'
+    }
+    
     actual_weights = {}
     print("\n[1] Bắt đầu quét tìm các checkpoints đã huấn luyện...")
     for name, s_dir in stream_dirs.items():
-        ckpt = find_best_checkpoint(s_dir)
-        if ckpt:
-            actual_weights[name] = ckpt
-            print(f"  + Tìm thấy {name:12}: {ckpt}")
+        approved_key = approved_keys[name]
+        approved_path = APPROVED_CHECKPOINTS.get(approved_key)
+        
+        # Check if the approved path exists and is not a placeholder
+        use_approved = False
+        if approved_path and os.path.exists(approved_path) and os.path.isfile(approved_path):
+            if "YOUR_NEW_EVOLVE_PATH" not in approved_path and "..." not in approved_path:
+                use_approved = True
+                
+        if use_approved:
+            actual_weights[name] = approved_path
+            print(f"  + Sử dụng Checkpoint cấu hình sẵn (APPROVED_CHECKPOINTS) cho {name:12}: {approved_path}")
         else:
-            # Fallback về cấu hình mặc định trong yaml nếu không quét thấy
-            yaml_weight = None
-            if name == 'Joint': yaml_weight = p.joint_weights
-            elif name == 'Bone': yaml_weight = p.bone_weights
-            elif name == 'Joint Motion': yaml_weight = p.joint_motion_weights
-            elif name == 'Bone Motion': yaml_weight = p.bone_motion_weights
-            
-            if yaml_weight and os.path.exists(yaml_weight):
-                actual_weights[name] = yaml_weight
-                print(f"  + Sử dụng mặc định {name:12}: {yaml_weight} (từ YAML)")
+            ckpt = find_best_checkpoint(s_dir)
+            if ckpt:
+                actual_weights[name] = ckpt
+                print(f"  + Tìm thấy {name:12}: {ckpt}")
             else:
-                print(f"  X CẢNH BÁO: Không tìm thấy checkpoint cho luồng {name}!")
+                # Fallback về cấu hình mặc định trong yaml nếu không quét thấy
+                yaml_weight = None
+                if name == 'Joint': yaml_weight = p.joint_weights
+                elif name == 'Bone': yaml_weight = p.bone_weights
+                elif name == 'Joint Motion': yaml_weight = p.joint_motion_weights
+                elif name == 'Bone Motion': yaml_weight = p.bone_motion_weights
+                
+                if yaml_weight and os.path.exists(yaml_weight):
+                    actual_weights[name] = yaml_weight
+                    print(f"  + Sử dụng mặc định {name:12}: {yaml_weight} (từ YAML)")
+                else:
+                    print(f"  X CẢNH BÁO: Không tìm thấy checkpoint cho luồng {name}!")
                 
     if len(actual_weights) < 4:
         print("\n[Lỗi] Không tìm thấy đầy đủ checkpoints cho cả 4 luồng. Vui lòng kiểm tra lại thư mục work_dir!")
@@ -201,7 +253,11 @@ def main():
     print(f"  * Weighted Ensemble Top-5 Acc: {acc5_hard:.2f}%")
     
     # 5. Đánh giá Adaptive Fusion Gate (Hợp nhất trọng số động)
-    fusion_gate_path = 'work_dir/fusion_gate_best.pt'
+    approved_gate = APPROVED_CHECKPOINTS.get('fusion_gate')
+    if approved_gate and os.path.exists(approved_gate) and os.path.isfile(approved_gate):
+        fusion_gate_path = approved_gate
+    else:
+        fusion_gate_path = 'work_dir/fusion_gate_best.pt'
     acc_adaptive = None
     acc5_adaptive = None
     
