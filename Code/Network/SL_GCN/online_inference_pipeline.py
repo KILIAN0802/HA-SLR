@@ -53,30 +53,26 @@ def find_best_checkpoint(base_dir, prefix):
     return best_file
 
 class AdaptiveFusionGate(nn.Module):
-    def __init__(self, num_classes=200, temperature=2.0):
+    def __init__(self, num_classes=200):
         """
-        Gating network: Kiến trúc sâu có Regularization và Learnable Bias
+        Gating network: Kiến trúc phẳng hóa có Regularization mạnh
+        để ngăn chặn Overfitting vào phân phối Softmax cực đoan.
         """
         super(AdaptiveFusionGate, self).__init__()
-        self.fc = nn.Sequential(
+        self.gate_network = nn.Sequential(
             nn.Linear(4 * num_classes, 128),
-            nn.BatchNorm1d(128),
+            nn.BatchNorm1d(128),    # Ổn định phân phối thang đo xác suất
             nn.ReLU(),
-            nn.Dropout(p=0.25),
-            nn.Linear(128, 32),
-            nn.BatchNorm1d(32),
-            nn.ReLU(),
-            nn.Dropout(p=0.25),
-            nn.Linear(32, 4)
+            nn.Dropout(p=0.5),      # Ép mạng không được học vẹt các đỉnh xác suất cực đoan
+            nn.Linear(128, 4)
         )
-        self.temperature = temperature
-        # Parameter học được để mô hình tự tối ưu hóa mức phạt cho từng luồng
-        self.alpha_bias = nn.Parameter(torch.tensor([0.0, 0.0, -1.5, -0.5]))
-        
+        self.T = 2.0  # Temperature scaling để làm mượt phân phối trọng số
+
     def forward(self, x):
-        gate_logits = self.fc(x)
-        fused_alphas = torch.softmax((gate_logits + self.alpha_bias) / self.temperature, dim=-1)
-        return fused_alphas
+        # Làm mượt phân phối alpha (Smooth weight distribution)
+        alpha = self.gate_network(x) / self.T
+        alpha = torch.softmax(alpha, dim=-1)  # Cho ra [a1, a2, a3, a4] mượt mà hơn
+        return alpha
 
 AdaptiveFusionModule = AdaptiveFusionGate
 

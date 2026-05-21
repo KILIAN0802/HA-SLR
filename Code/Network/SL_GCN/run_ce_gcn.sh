@@ -103,7 +103,7 @@ else
       --w_bone "$BONE_CKPT" \
       --w_jm "$JM_CKPT" \
       --w_bm "$BM_CKPT" \
-      --save_path "work_dir/fusion_gate_best.pt" \
+      --save_path "work_dir/fusion_gate_best-1.pt" \
       --epochs 20 \
       --lr 1e-3
 fi

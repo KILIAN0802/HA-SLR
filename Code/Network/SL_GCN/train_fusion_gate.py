@@ -213,7 +213,13 @@ def main():
             fused_probs = (softmax_stacked * alpha_unsqueezed).sum(dim=0)
             
             # CrossEntropyLoss trong PyTorch yêu cầu đầu vào dạng log ẩn, tính toán trực tiếp từ phân phối xác suất hợp nhất:
-            loss = criterion(torch.log(fused_probs + 1e-8), batch_label)
+            ce_loss = criterion(torch.log(fused_probs + 1e-8), batch_label)
+            
+            # L2 Regularization (Smoothness Enforcement)
+            uniform_target = torch.full_like(alpha, 0.25)
+            reg_loss = torch.mean((alpha - uniform_target) ** 2)
+            
+            loss = ce_loss + 0.1 * reg_loss
             
             optimizer.zero_grad()
             loss.backward()
