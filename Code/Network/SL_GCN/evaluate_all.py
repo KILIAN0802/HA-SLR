@@ -15,6 +15,13 @@ from parser import get_parser
 from model.utils import import_class
 from online_inference_pipeline import AdaptiveFusionGate
 
+APPROVED_CHECKPOINTS = {
+    'joint': 'work_dir/MultiVSL200/Joint/bs32_f150_lr0.1_warmup0/2026-05-20_17-16-03/checkpoints/Joint_best_acc_116_6543.pt', 
+    'bone': 'work_dir/MultiVSL200/Bone/bs32_f150_lr0.1_warmup0/2026-05-20_19-38-53/checkpoints/Bone_best_acc_43_6296.pt',
+    'joint_motion': 'work_dir/MultiVSL200/Joint_Motion/bs32_f150_lr0.1_warmup0/2026-05-20_20-22-42/checkpoints/Joint_Motion_best_acc_40_3251.pt',
+    'bone_motion': 'work_dir/MultiVSL200/Bone_Motion/bs32_f150_lr0.1_warmup0/2026-05-20_21-06-32/checkpoints/Bone_Motion_best_acc_42_5452.pt',
+    'fusion_gate': 'work_dir/fusion_gate_best.pt'
+}
 def find_best_checkpoint_robust(base_dir, prefix):
     """
     Quét toàn bộ thư mục base_dir (bao gồm cả các thư mục con) để tìm checkpoint
@@ -133,12 +140,12 @@ def main():
         if k not in p.__dict__ or p.__dict__[k] is None:
             p.__dict__[k] = v
             
-    print("\n[1] Bắt đầu quét tìm các checkpoints tối ưu nhất từ work_dir...")
+    print("\n[1] Bắt đầu nạp các checkpoints chỉ định cấu hình sẵn...")
     actual_weights = {
-        'Joint': find_best_checkpoint_robust('work_dir/MultiVSL200/Joint', 'Joint_best_acc'),
-        'Bone': find_best_checkpoint_robust('work_dir/MultiVSL200/Bone', 'Bone_best_acc'),
-        'Joint Motion': find_best_checkpoint_robust('work_dir/MultiVSL200/Joint_Motion', 'Joint_Motion_best_acc'),
-        'Bone Motion': find_best_checkpoint_robust('work_dir/MultiVSL200/Bone_Motion', 'Bone_Motion_best_acc')
+        'Joint': APPROVED_CHECKPOINTS['joint'],
+        'Bone': APPROVED_CHECKPOINTS['bone'],
+        'Joint Motion': APPROVED_CHECKPOINTS['joint_motion'],
+        'Bone Motion': APPROVED_CHECKPOINTS['bone_motion']
     }
     
     for name, path in actual_weights.items():
