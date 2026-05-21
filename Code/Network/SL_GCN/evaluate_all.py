@@ -197,7 +197,7 @@ def main():
     print(f"  * Weighted Ensemble Top-1 Acc: {acc_hard:.2f}%")
     print(f"  * Weighted Ensemble Top-5 Acc: {acc5_hard:.2f}%")
     
-    fusion_gate_path = 'work_dir/Fusion_Gate/fusion_gate_best.pt'
+    fusion_gate_path = 'work_dir/fusion_gate_best.pt'
     acc_adaptive, acc5_adaptive = None, None
     
     if os.path.exists(fusion_gate_path):
