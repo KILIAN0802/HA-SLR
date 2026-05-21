@@ -16,7 +16,7 @@ from model.utils import import_class
 from online_inference_pipeline import AdaptiveFusionGate
 
 APPROVED_CHECKPOINTS = {
-    'joint': 'work_dir/MultiVSL200/Joint/bs32_f150_lr0.1_warmup0/2026-05-20_17-16-03/checkpoints/Joint_best_acc_116_6543.pt', 
+    'joint': 'work_dir/MultiVSL200/Joint/bs32_f150_lr0.1_warmup0/2026-05-20_17-16-03/checkpoints/Joint_best_acc_62_6831.pt', 
     'bone': 'work_dir/MultiVSL200/Bone/bs32_f150_lr0.1_warmup0/2026-05-20_19-38-53/checkpoints/Bone_best_acc_43_6296.pt',
     'joint_motion': 'work_dir/MultiVSL200/Joint_Motion/bs32_f150_lr0.1_warmup0/2026-05-20_20-22-42/checkpoints/Joint_Motion_best_acc_40_3251.pt',
     'bone_motion': 'work_dir/MultiVSL200/Bone_Motion/bs32_f150_lr0.1_warmup0/2026-05-20_21-06-32/checkpoints/Bone_Motion_best_acc_42_5452.pt',
