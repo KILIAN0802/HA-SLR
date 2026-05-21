@@ -81,10 +81,17 @@ def get_scores(model_name, feeder_name, weights_path, feeder_args, model_args, b
 
 def main():
     parser = get_parser()
+    
+    # Check if --config is explicitly passed, otherwise default to ensemble/test_ensemble.yaml
+    has_config = False
+    for arg in sys.argv:
+        if arg.startswith('--config'):
+            has_config = True
+            break
+            
     p = parser.parse_args()
     
-    # Đọc cấu hình mặc định từ test_ensemble.yaml
-    config_path = p.config if p.config else 'ensemble/test_ensemble.yaml'
+    config_path = p.config if has_config else 'ensemble/test_ensemble.yaml'
     print(f"Đang đọc cấu hình cơ sở từ: {config_path}")
     
     if not os.path.exists(config_path):
