@@ -20,7 +20,7 @@ APPROVED_CHECKPOINTS = {
     'bone': 'work_dir/MultiVSL200/Bone/bs32_f150_lr0.1_warmup0/2026-05-20_19-38-53/checkpoints/Bone_best_acc_43_6296.pt',
     'joint_motion': 'work_dir/MultiVSL200/Joint_Motion/bs32_f150_lr0.1_warmup0/2026-05-20_20-22-42/checkpoints/Joint_Motion_best_acc_40_3251.pt',
     'bone_motion': 'work_dir/MultiVSL200/Bone_Motion/bs32_f150_lr0.1_warmup0/2026-05-20_21-06-32/checkpoints/Bone_Motion_best_acc_42_5452.pt',
-    'fusion_gate': 'work_dir/fusion_gate_best-1.pt'
+    'fusion_gate': 'work_dir/fusion_gate_best.pt'
 }
 def find_best_checkpoint_robust(base_dir, prefix):
     """
@@ -204,7 +204,7 @@ def main():
     print(f"  * Weighted Ensemble Top-1 Acc: {acc_hard:.2f}%")
     print(f"  * Weighted Ensemble Top-5 Acc: {acc5_hard:.2f}%")
     
-    fusion_gate_path = 'work_dir/fusion_gate_best-1.pt'
+    fusion_gate_path = 'work_dir/fusion_gate_best.pt'
     acc_adaptive, acc5_adaptive = None, None
     
     if os.path.exists(fusion_gate_path):
