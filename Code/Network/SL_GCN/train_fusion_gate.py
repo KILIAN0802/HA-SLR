@@ -20,7 +20,7 @@ def get_parser():
     parser.add_argument('--num_classes', type=int, default=200, help='Số lượng nhãn phân lớp')
     parser.add_argument('--batch_size', type=int, default=32, help='Kích thước batch')
     parser.add_argument('--lr', type=float, default=1e-3, help='Tốc độ học (learning rate)')
-    parser.add_argument('--epochs', type=int, default=30, help='Số epoch huấn luyện')
+    parser.add_argument('--epochs', type=int, default=80, help='Số epoch huấn luyện')
     parser.add_argument('--device', type=str, default='cuda:0', help='Thiết bị huấn luyện (Vd: cuda:0 hoặc cpu)')
     parser.add_argument('--save_path', type=str, default='work_dir/fusion_gate_best.pt', help='Nơi lưu file trọng số tốt nhất')
     
