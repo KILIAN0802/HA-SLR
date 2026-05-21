@@ -55,20 +55,27 @@ def find_best_checkpoint(base_dir, prefix):
 class AdaptiveFusionGate(nn.Module):
     def __init__(self, num_classes=200, temperature=2.0):
         """
-        Gating network: Nhánh phụ siêu nhỏ bổ sung lớp Temperature để làm mịn phân phối alpha
+        Gating network: Kiến trúc sâu có Regularization và Learnable Bias
         """
         super(AdaptiveFusionGate, self).__init__()
         self.fc = nn.Sequential(
-            nn.Linear(4 * num_classes, 64),
+            nn.Linear(4 * num_classes, 128),
+            nn.BatchNorm1d(128),
             nn.ReLU(),
-            nn.Linear(64, 4)
+            nn.Dropout(p=0.25),
+            nn.Linear(128, 32),
+            nn.BatchNorm1d(32),
+            nn.ReLU(),
+            nn.Dropout(p=0.25),
+            nn.Linear(32, 4)
         )
         self.temperature = temperature
+        # Parameter học được để mô hình tự tối ưu hóa mức phạt cho từng luồng
+        self.alpha_bias = nn.Parameter(torch.tensor([0.0, 0.0, -1.5, -0.5]))
         
     def forward(self, x):
         gate_logits = self.fc(x)
-        penalty_mask = torch.tensor([0.0, 0.0, -1.5, -0.5], device=x.device)
-        fused_alphas = torch.softmax((gate_logits + penalty_mask) / self.temperature, dim=-1)
+        fused_alphas = torch.softmax((gate_logits + self.alpha_bias) / self.temperature, dim=-1)
         return fused_alphas
 
 AdaptiveFusionModule = AdaptiveFusionGate

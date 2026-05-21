@@ -20,22 +20,22 @@ def get_parser():
     parser.add_argument('--num_classes', type=int, default=200, help='Số lượng nhãn phân lớp')
     parser.add_argument('--batch_size', type=int, default=32, help='Kích thước batch')
     parser.add_argument('--lr', type=float, default=1e-3, help='Tốc độ học (learning rate)')
-    parser.add_argument('--epochs', type=int, default=20, help='Số epoch huấn luyện')
+    parser.add_argument('--epochs', type=int, default=30, help='Số epoch huấn luyện')
     parser.add_argument('--device', type=str, default='cuda:0', help='Thiết bị huấn luyện (Vd: cuda:0 hoặc cpu)')
     parser.add_argument('--save_path', type=str, default='work_dir/fusion_gate_best.pt', help='Nơi lưu file trọng số tốt nhất')
     
     # 4 Checkpoint weights của các nhánh
     parser.add_argument('--w_joint', type=str, 
-                        default='work_dir/MultiVSL200/Joint/bs32_f150_lr0.1_warmup0/2026-05-19_20-53-05/checkpoints/Joint_best_acc_116_6543.pt',
+                        default='work_dir/MultiVSL200/Joint/bs32_f150_lr0.1_warmup0/2026-05-20_17-16-03/checkpoints/Joint_best_acc_62_6831.pt',
                         help='Weights của nhánh Joint')
     parser.add_argument('--w_bone', type=str, 
-                        default='work_dir/MultiVSL200/Bone/bs32_f150_lr0.1_warmup0/2026-05-19_22-24-43/checkpoints/Bone_best_acc_44_6419.pt',
+                        default='work_dir/MultiVSL200/Bone/bs32_f150_lr0.1_warmup0/2026-05-20_19-38-53/checkpoints/Bone_best_acc_43_6296.pt',
                         help='Weights của nhánh Bone')
     parser.add_argument('--w_jm', type=str, 
-                        default='work_dir/MultiVSL200/Joint_Motion/bs32_f150_lr0.1_warmup0/2026-05-19_22-45-31/checkpoints/Joint_Motion_best_acc_30_2489.pt',
+                        default='work_dir/MultiVSL200/Joint_Motion/bs32_f150_lr0.1_warmup0/2026-05-20_20-22-42/checkpoints/Joint_Motion_best_acc_40_3251.pt',
                         help='Weights của nhánh Joint Motion')
     parser.add_argument('--w_bm', type=str, 
-                        default='work_dir/MultiVSL200/Bone_Motion/bs32_f150_lr0.1_warmup0/2026-05-19_23-06-18/checkpoints/Bone_Motion_best_acc_41_5226.pt',
+                        default='work_dir/MultiVSL200/Bone_Motion/bs32_f150_lr0.1_warmup0/2026-05-20_21-06-32/checkpoints/Bone_Motion_best_acc_42_5452.pt',
                         help='Weights của nhánh Bone Motion')
     return parser
 
@@ -148,6 +148,9 @@ def main():
     fusion_gate = AdaptiveFusionGate(num_classes=args.num_classes).to(device)
     optimizer = optim.Adam(fusion_gate.parameters(), lr=args.lr, weight_decay=1e-5)
     
+    # Thêm Bộ điều phối tốc độ học (LR Scheduler)
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=1e-6)
+    
     # Định nghĩa CrossEntropyLoss trên log-probability của giá trị Softmax kết hợp
     criterion = nn.CrossEntropyLoss()
     
@@ -228,7 +231,11 @@ def main():
             
         epoch_loss = total_loss / total_samples
         epoch_acc = (correct / total_samples) * 100
-        print(f"[*] Kết quả Epoch {epoch:02d}: Loss = {epoch_loss:.5f} | Accuracy = {epoch_acc:.2f}%")
+        current_lr = scheduler.get_last_lr()[0]
+        print(f"[*] Kết quả Epoch {epoch:02d}: Loss = {epoch_loss:.5f} | Accuracy = {epoch_acc:.2f}% | LR = {current_lr:.6f}")
+        
+        # Bước (Step) scheduler
+        scheduler.step()
         
         # Lưu checkpoint tốt nhất
         if epoch_acc >= best_acc:
