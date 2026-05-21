@@ -67,8 +67,8 @@ class AdaptiveFusionGate(nn.Module):
         
     def forward(self, x):
         gate_logits = self.fc(x)
-        # Sử dụng chia Temperature để mượt hóa phân phối, chống overfitting trên tập Val
-        fused_alphas = torch.softmax(gate_logits / self.temperature, dim=-1)
+        penalty_mask = torch.tensor([0.0, 0.0, -1.5, -0.5], device=x.device)
+        fused_alphas = torch.softmax((gate_logits + penalty_mask) / self.temperature, dim=-1)
         return fused_alphas
 
 AdaptiveFusionModule = AdaptiveFusionGate
