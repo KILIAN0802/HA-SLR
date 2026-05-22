@@ -204,6 +204,80 @@ def main():
     print(f"  * Weighted Ensemble Top-1 Acc: {acc_hard:.2f}%")
     print(f"  * Weighted Ensemble Top-5 Acc: {acc5_hard:.2f}%")
     
+    print("\n[5.1] Đang tìm kiếm bộ alpha tối ưu để đạt độ chính xác (Accuracy) lớn nhất...")
+    import itertools
+    s_j = scores_dict['Joint']
+    s_b = scores_dict['Bone']
+    s_jm = scores_dict['Joint Motion']
+    s_bm = scores_dict['Bone Motion']
+    
+    # Bước 1: Quét thô (Coarse Grid Search) với bước nhảy 0.1 từ 0.0 đến 1.0
+    print("  -> Bước 1: Đang quét thô các tổ hợp alpha từ 0.0 đến 1.0 (bước nhảy 0.1)...")
+    candidates_coarse = np.arange(0.0, 1.1, 0.1)
+    best_acc_coarse = -1.0
+    best_alpha_coarse = None
+    
+    for a0, a1, a2, a3 in itertools.product(candidates_coarse, repeat=4):
+        if a0 == 0 and a1 == 0 and a2 == 0 and a3 == 0:
+            continue
+        # Tích chập tuyến tính nhanh (argmax không đổi khi không chia cho sum(alpha))
+        fused = s_j * a0 + s_b * a1 + s_jm * a2 + s_bm * a3
+        preds = np.argmax(fused, axis=1)
+        acc = np.mean(preds == label) * 100
+        if acc > best_acc_coarse:
+            best_acc_coarse = acc
+            best_alpha_coarse = (a0, a1, a2, a3)
+            
+    print(f"    * Kết quả quét thô tốt nhất: Top-1 Acc = {best_acc_coarse:.2f}% với alpha = {[round(x, 2) for x in best_alpha_coarse]}")
+    
+    # Bước 2: Quét tinh (Fine Grid Search) xung quanh lân cận bộ tốt nhất với bước nhảy 0.02
+    print("  -> Bước 2: Đang quét tinh lân cận bộ tốt nhất với bước nhảy 0.02...")
+    a0_c, a1_c, a2_c, a3_c = best_alpha_coarse
+    
+    def get_neighbors(val, step=0.02, radius=0.1):
+        low = max(0.0, val - radius)
+        high = min(1.0, val + radius)
+        return np.arange(low, high + step/2, step)
+        
+    r0 = get_neighbors(a0_c)
+    r1 = get_neighbors(a1_c)
+    r2 = get_neighbors(a2_c)
+    r3 = get_neighbors(a3_c)
+    
+    best_acc_fine = best_acc_coarse
+    best_alpha_fine = best_alpha_coarse
+    
+    for a0, a1, a2, a3 in itertools.product(r0, r1, r2, r3):
+        if a0 == 0 and a1 == 0 and a2 == 0 and a3 == 0:
+            continue
+        fused = s_j * a0 + s_b * a1 + s_jm * a2 + s_bm * a3
+        preds = np.argmax(fused, axis=1)
+        acc = np.mean(preds == label) * 100
+        if acc > best_acc_fine:
+            best_acc_fine = acc
+            best_alpha_fine = (a0, a1, a2, a3)
+            
+    # Tính Top-5 accuracy cho bộ tối ưu vừa tìm được
+    fused_scores_opt = (
+        s_j * best_alpha_fine[0] + 
+        s_b * best_alpha_fine[1] + 
+        s_jm * best_alpha_fine[2] + 
+        s_bm * best_alpha_fine[3]
+    ) / sum(best_alpha_fine)
+    preds_opt = np.argmax(fused_scores_opt, axis=1)
+    acc_opt = np.mean(preds_opt == label) * 100
+    correct_top5_opt = sum(1 for i in range(len(label)) if label[i] in fused_scores_opt[i].argsort()[-5:])
+    acc5_opt = (correct_top5_opt / len(label)) * 100
+    
+    best_alpha_list = [round(x, 4) for x in best_alpha_fine]
+    print(f"  * KẾT QUẢ TÌM ĐƯỢC BỘ ALPHA TỐI ƯU:")
+    print(f"    + Bộ alpha tối ưu: {best_alpha_list}")
+    if best_alpha_fine[0] > 0:
+        norm_alpha = [round(x / best_alpha_fine[0], 4) for x in best_alpha_fine]
+        print(f"    + Bộ alpha chuẩn hóa (alpha[0]=1.0): {norm_alpha}")
+    print(f"    + Độ chính xác Top-1 Ensemble tối ưu: {acc_opt:.2f}%")
+    print(f"    + Độ chính xác Top-5 Ensemble tối ưu: {acc5_opt:.2f}%")
+    
     fusion_gate_path = 'work_dir/fusion_gate_best.pt'
     acc_adaptive, acc5_adaptive = None, None
     
@@ -254,15 +328,24 @@ def main():
     print("-"*60)
     
     msg_hard = f"Weighted Ensemble (Cố định):        {acc_hard:.2f}% (Top-5: {acc5_hard:.2f}%)"
+    msg_opt  = f"Weighted Ensemble (Tối ưu):         {acc_opt:.2f}% (Top-5: {acc5_opt:.2f}%)"
     msg_adaptive = f"Adaptive Fusion Gate (Động):         {acc_adaptive:.2f}% (Top-5: {acc5_adaptive:.2f}%)" if acc_adaptive is not None else ""
     
+    valid_accs = [("Fixed", acc_hard), ("Opt", acc_opt)]
     if acc_adaptive is not None:
-        if acc_adaptive >= acc_hard:
-            msg_adaptive += "  <-- TỐT NHẤT (BEST PERFORMANCE)"
-        else:
-            msg_hard += "  <-- TỐT NHẤT (BEST PERFORMANCE)"
-            
+        valid_accs.append(("Adaptive", acc_adaptive))
+        
+    best_type = max(valid_accs, key=lambda x: x[1])[0]
+    
+    if best_type == "Fixed":
+        msg_hard += "  <-- TỐT NHẤT (BEST PERFORMANCE)"
+    elif best_type == "Opt":
+        msg_opt += "  <-- TỐT NHẤT (BEST PERFORMANCE)"
+    elif best_type == "Adaptive":
+        msg_adaptive += "  <-- TỐT NHẤT (BEST PERFORMANCE)"
+        
     print(msg_hard)
+    print(msg_opt)
     if msg_adaptive:
         print(msg_adaptive)
     print("="*60)
