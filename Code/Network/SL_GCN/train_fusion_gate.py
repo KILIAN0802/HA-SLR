@@ -215,11 +215,13 @@ def main():
             # CrossEntropyLoss trong PyTorch yêu cầu đầu vào dạng log ẩn, tính toán trực tiếp từ phân phối xác suất hợp nhất:
             ce_loss = criterion(torch.log(fused_probs + 1e-8), batch_label)
             
-            # L2 Regularization (Smoothness Enforcement)
-            uniform_target = torch.full_like(alpha, 0.25)
-            reg_loss = torch.mean((alpha - uniform_target) ** 2)
+            # L2 Regularization hướng tới phân phối trọng số Prior tối ưu (thay vì 0.25 đồng đều làm sụt Acc)
+            # Bộ trọng số tối ưu từ Grid Search: [0.68, 0.88, 0.12, 0.28], chuẩn hóa: [0.347, 0.449, 0.061, 0.143]
+            prior_target = torch.tensor([0.347, 0.449, 0.061, 0.143], device=device)
+            target_alpha = prior_target.expand(alpha.size(0), -1)
+            reg_loss = torch.mean((alpha - target_alpha) ** 2)
             
-            loss = ce_loss + 0.1 * reg_loss
+            loss = ce_loss + 0.05 * reg_loss
             
             optimizer.zero_grad()
             loss.backward()
