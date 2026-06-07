@@ -158,7 +158,7 @@ def plot_tsne(features, labels, class_names, save_path='visualizations/tsne_feat
     label_subset = labels[mask]
     
     # Run t-SNE
-    tsne = TSNE(n_components=2, perplexity=30, n_iter=1000, random_state=42)
+    tsne = TSNE(n_components=2, perplexity=30, random_state=42)
     embeds = tsne.fit_transform(feat_subset)
     
     # Plot using a clean, modern academic aesthetic
