@@ -138,3 +138,4 @@ node_modules/
 Code/Network/SL_GCN/work_dir/
 Code/Network/SL_GCN/data/*
 !Code/Network/SL_GCN/data/lookuptable.csv
+Code/Network/SL_GCN/visualizations/*
