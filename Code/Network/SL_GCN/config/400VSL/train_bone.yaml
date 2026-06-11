@@ -7,8 +7,8 @@ splits: [test]
 
 # Wandb
 use_wandb: True
-wandb_project: "HA-SLR-400VSL"
-wandb_run_name: "Bone"
+wandb_project: "HA-SLR-CEGCN"
+wandb_run_name: "Bone_400VSL"
 
 # Cấu hình Feeder
 feeder: feeders.feeder_cvpr.Feeder
