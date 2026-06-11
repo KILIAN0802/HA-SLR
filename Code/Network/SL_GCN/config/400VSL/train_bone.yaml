@@ -5,6 +5,11 @@ joint_sign: processed
 joint_type: 27_direct
 splits: [test]
 
+# Wandb
+use_wandb: True
+wandb_project: "HA-SLR-400VSL"
+wandb_run_name: "Bone"
+
 # Cấu hình Feeder
 feeder: feeders.feeder_cvpr.Feeder
 train_feeder_args:

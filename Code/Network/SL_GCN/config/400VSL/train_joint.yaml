@@ -5,6 +5,11 @@ joint_sign: processed
 joint_type: 27_direct
 splits: [test]
 
+# Wandb
+use_wandb: True
+wandb_project: "HA-SLR-400VSL"
+wandb_run_name: "Joint"
+
 # Cấu hình Feeder (Bộ nạp dữ liệu)
 feeder: feeders.feeder_cvpr.Feeder
 train_feeder_args:
@@ -27,8 +32,8 @@ test_feeder_args:
 # Cấu hình Mô hình (Model)
 model: model.hand_aware_sl_lgcn.Model
 model_args:
-  num_class: 400      # Cập nhật số lớp cho 400VSL (0-399)
-  num_point: 27       # 27 khớp (7 pose, 10 LH, 10 RH)
+  num_class: 400 # Cập nhật số lớp cho 400VSL (0-399)
+  num_point: 27 # 27 khớp (7 pose, 10 LH, 10 RH)
   num_person: 1
   graph: graph.sign_27.Graph
   A_hands: graph.sign_27_A_hands.Graph
