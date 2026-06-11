@@ -1,0 +1,284 @@
+wandb_version: 1
+
+_wandb:
+  desc: null
+  value:
+    python_version: 3.10.20
+    cli_version: 0.25.0
+    framework: torch
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    start_time: 1779271437
+    t:
+      1:
+      - 1
+      2:
+      - 1
+      3:
+      - 4
+      - 13
+      - 42
+      - 61
+      4: 3.10.20
+      5: 0.25.0
+      13: linux-x86_64
+    e:
+      h3oq583m8vbaki53o4nt3iegoe9if0s0:
+        os: Linux-6.14.0-33-generic-x86_64-with-glibc2.39
+        python: CPython 3.10.20
+        started_at: '2026-05-20T10:03:56.980513Z'
+        args:
+        - --config
+        - config/MultiVSL200/train_joint.yaml
+        - --use-wandb
+        - 'True'
+        - --wandb-project
+        - HA-SLR-CEGCN
+        - --wandb-run-name
+        - MultiVSL200_Joint_Baseline-1
+        program: /mnt/nvme2/users/utbt_sv1/HASLR/HA-SLR/Code/Network/SL_GCN/main_base.py
+        code_path: Code/Network/SL_GCN/main_base.py
+        code_path_local: main_base.py
+        git:
+          remote_url: https://github.com/KILIAN0802/HA-SLR.git
+          commit: 2662a1b847cb1a386db13a9923c3dd8927b1b728
+        root: /mnt/nvme2/users/utbt_sv1/HASLR/HA-SLR/Code/Network/SL_GCN
+        host: sigm-UTBT
+        executable: /mnt/nvme0/home/utbt_sv1/miniconda3/envs/haslr_env/bin/python
+        cpu_count: 24
+        cpu_count_logical: 48
+        gpu_type: NVIDIA RTX 4500 Ada Generation
+        gpu_count: 4
+        disk:
+          /:
+            total: '243885932544'
+            used: '179576455168'
+        memory:
+          total: '67132579840'
+        gpu_nvidia:
+        - name: NVIDIA RTX 4500 Ada Generation
+          memory_total: '25763512320'
+          cuda_cores: 7680
+          architecture: Ada
+          uuid: GPU-5f1f959d-3379-a292-8ee1-85d75013615e
+        - name: NVIDIA RTX 4500 Ada Generation
+          memory_total: '25763512320'
+          cuda_cores: 7680
+          architecture: Ada
+          uuid: GPU-e676f2a2-a788-d122-d48d-ed8b24dca2c5
+        - name: NVIDIA RTX 4500 Ada Generation
+          memory_total: '25763512320'
+          cuda_cores: 7680
+          architecture: Ada
+          uuid: GPU-41fabe21-d274-4031-8bb3-b94752bfacac
+        - name: NVIDIA RTX 4500 Ada Generation
+          memory_total: '25763512320'
+          cuda_cores: 7680
+          architecture: Ada
+          uuid: GPU-ec79787f-1ec3-e7be-a6de-2ddcb610d79e
+        cuda_version: '12.8'
+        writer_id: h3oq583m8vbaki53o4nt3iegoe9if0s0
+work_dir:
+  desc: null
+  value: ./work_dir/MultiVSL200/Joint/bs32_f150_lr0.1_warmup0/2026-05-20_17-03-56
+model_saved_name:
+  desc: null
+  value: ./work_dir/MultiVSL200/Joint/bs32_f150_lr0.1_warmup0/2026-05-20_17-03-56/checkpoints/Joint
+Experiment_name:
+  desc: null
+  value: MultiVSL200/Joint
+config:
+  desc: null
+  value: config/MultiVSL200/train_joint.yaml
+phase:
+  desc: null
+  value: train
+save_score:
+  desc: null
+  value: false
+seed:
+  desc: null
+  value: 1
+log_interval:
+  desc: null
+  value: 100
+save_interval:
+  desc: null
+  value: 2
+eval_interval:
+  desc: null
+  value: 5
+print_log:
+  desc: null
+  value: true
+show_topk:
+  desc: null
+  value:
+  - 1
+  - 5
+feeder:
+  desc: null
+  value: feeders.feeder_cvpr.Feeder
+num_worker:
+  desc: null
+  value: 0
+train_feeder_args:
+  desc: null
+  value:
+    data_path: data/data/Thi/processed/27_direct/train_data_joint.npy
+    label_path: data/data/Thi/processed/27_direct/train_label.pkl
+    window_size: 150
+    debug: false
+    use_jdma: true
+val_feeder_args:
+  desc: null
+  value:
+    data_path: data/data/Thi/processed/27_direct/val_data_joint.npy
+    label_path: data/data/Thi/processed/27_direct/val_label.pkl
+    window_size: 150
+    debug: false
+test_feeder_args:
+  desc: null
+  value:
+    data_path: data/processed/27_direct/val_data_joint.npy
+    label_path: data/processed/27_direct/val_label.pkl
+    window_size: 150
+    debug: false
+model:
+  desc: null
+  value: model.hand_aware_sl_lgcn.Model
+model_args:
+  desc: null
+  value:
+    num_class: 200
+    num_point: 27
+    num_person: 1
+    graph: graph.sign_27.Graph
+    A_hands: graph.sign_27_A_hands.Graph
+    graph_args:
+      labeling_mode: spatial
+weights:
+  desc: null
+  value: null
+ignore_weights:
+  desc: null
+  value: []
+batch_size:
+  desc: null
+  value: 32
+num_epoch:
+  desc: null
+  value: 200
+step:
+  desc: null
+  value:
+  - 50
+  - 100
+  - 150
+device:
+  desc: null
+  value:
+  - 0
+optimizer:
+  desc: null
+  value: SGD
+nesterov:
+  desc: null
+  value: false
+test_batch_size:
+  desc: null
+  value: 256
+start_epoch:
+  desc: null
+  value: 0
+resume_checkpoint:
+  desc: null
+  value: ''
+auto_resume:
+  desc: null
+  value: false
+weight_decay:
+  desc: null
+  value: 0.0005
+keep_rate:
+  desc: null
+  value: 0.9
+groups:
+  desc: null
+  value: 8
+only_train_part:
+  desc: null
+  value: true
+only_train_epoch:
+  desc: null
+  value: 0
+warm_up_epoch:
+  desc: null
+  value: 0
+eval_pkl:
+  desc: null
+  value: null
+train_base_lr:
+  desc: null
+  value: 0.1
+test_base_lr:
+  desc: null
+  value: 0.1
+es_patience:
+  desc: null
+  value: 50
+es:
+  desc: null
+  value: false
+modality:
+  desc: null
+  value: joint
+joint_sign:
+  desc: null
+  value: processed
+joint_type:
+  desc: null
+  value: 27_direct
+pretrain_cpt_time_tag:
+  desc: null
+  value: '*'
+splits:
+  desc: null
+  value:
+  - test
+use_wandb:
+  desc: null
+  value: true
+wandb_project:
+  desc: null
+  value: HA-SLR-CEGCN
+wandb_entity:
+  desc: null
+  value: ''
+wandb_run_name:
+  desc: null
+  value: MultiVSL200_Joint_Baseline-1
+wandb_group:
+  desc: null
+  value: ''
+wandb_tags:
+  desc: null
+  value: []
+wandb_mode:
+  desc: null
+  value: online
+wandb_id:
+  desc: null
+  value: ''
+wandb_resume:
+  desc: null
+  value: auto
+clone_auto:
+  desc: null
+  value: false
+evolve_mode:
+  desc: null
+  value: false
+base_lr:
+  desc: null
+  value: 0.1
