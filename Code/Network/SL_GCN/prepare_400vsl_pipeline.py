@@ -48,7 +48,7 @@ def split_npy_files():
             # Chuyển thành string và format đủ 6 chữ số nếu cần
             video_id_str = f"{int(video_id):06d}" 
             src = os.path.join(RAW_NPY_DIR, f"{video_id_str}.npy")
-            dst = os.path.join(DATA_ROOT, f"{part}_npy", f"{video_id}.npy")
+            dst = os.path.join(DATA_ROOT, f"{part}_npy", f"{video_id_str}.npy")
             if os.path.exists(src):
                 if not os.path.exists(dst):
                     os.symlink(src, dst)
