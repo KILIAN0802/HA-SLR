@@ -42,28 +42,24 @@ PROCESSED_DIR="data/data/400VSL/processed/27_direct"
 
 # 3.2 Luồng Bone (Sử dụng Clone & Evolve từ Joint để nhanh hơn)
 echo "[3.2/4] Training BONE stream..."
-nohup python -u main_base.py \
+python -u main_base.py \
   --config config/400VSL/train_bone.yaml \
   --clone_auto True \
-  --evolve_mode True  > log/${LOG_DATE}/train_bone.log 2>&1 &
+  --evolve_mode True  > log/${LOG_DATE}/train_bone.log 2>&1
 
 # 3.3 Luồng Joint Motion
 echo "[3.3/4] Training JOINT MOTION stream..."
-nohup python -u main_base.py \
+python -u main_base.py \
   --config config/400VSL/train_joint_motion.yaml \
   --clone_auto True \
-  --evolve_mode True > log/${LOG_DATE}/train_joint_motion.log 2>&1 &
+  --evolve_mode True > log/${LOG_DATE}/train_joint_motion.log 2>&1
 
 # 3.4 Luồng Bone Motion
 echo "[3.4/4] Training BONE MOTION stream..."
-nohup python -u main_base.py \
+python -u main_base.py \
   --config config/400VSL/train_bone_motion.yaml \
   --clone_auto True \
-  --evolve_mode True > log/${LOG_DATE}/train_bone_motion.log 2>&1 &
-
-# Đợi tất cả các tiến trình huấn luyện các luồng kết thúc
-echo "Waiting for all GCN training streams to complete..."
-wait
+  --evolve_mode True > log/${LOG_DATE}/train_bone_motion.log 2>&1
 
 # BƯỚC 4: ADAPTIVE FUSION (KẾT HỢP KẾT QUẢ VÀ HUẤN LUYỆN GATING NETWORK)
 echo "=========================================================="
@@ -81,8 +77,8 @@ JM_CKPT=$(find_best "work_dir/400VSL/Joint_Motion")
 BM_CKPT=$(find_best "work_dir/400VSL/Bone_Motion")
 
 if [ -n "$JOINT_CKPT" ]; then
-    echo "Starting Adaptive Fusion Gate training with nohup..."
-    nohup python -u train_fusion_gate.py \
+    echo "Starting Adaptive Fusion Gate training..."
+    python -u train_fusion_gate.py \
       --data_path "$PROCESSED_DIR/val_data_joint.npy" \
       --label_path "$PROCESSED_DIR/val_label.pkl" \
       --w_joint "$JOINT_CKPT" \
@@ -90,11 +86,7 @@ if [ -n "$JOINT_CKPT" ]; then
       --w_jm "$JM_CKPT" \
       --w_bm "$BM_CKPT" \
       --save_path "work_dir/400VSL/fusion_gate_final.pt" \
-      --epochs 50 > log/${LOG_DATE}/train_fusion.log 2>&1 &
-      
-    # Đợi quá trình huấn luyện Fusion Gate kết thúc
-    echo "Waiting for Fusion Gate training to complete..."
-    wait
+      --epochs 50 > log/${LOG_DATE}/train_fusion.log 2>&1
 else
     echo "LỖI: Không tìm thấy checkpoint để thực hiện Fusion!"
 fi
@@ -103,11 +95,8 @@ fi
 echo "=========================================================="
 echo ">>> BƯỚC 5: Chạy đánh giá đa luồng (Static & Dynamic)..."
 echo "=========================================================="
-nohup python -u evaluate_all.py \
-  --config config/400VSL/test_ensemble.yaml > log/${LOG_DATE}/evaluation.log 2>&1 &
-
-echo "Waiting for evaluation to complete..."
-wait
+python -u evaluate_all.py \
+  --config config/400VSL/test_ensemble.yaml > log/${LOG_DATE}/evaluation.log 2>&1
 
 echo "=========================================================="
 echo "PIPELINE HOÀN TẤT THÀNH CÔNG!"
