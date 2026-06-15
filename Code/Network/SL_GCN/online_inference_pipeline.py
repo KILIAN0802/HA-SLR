@@ -146,7 +146,7 @@ class CE_GCN_Pipeline:
                 output = output[0]
         return output
 
-    def predict(self, joint_frame):
+    def predict(self, joint_frame, mode='dynamic', static_weights=None, static_temperatures=None):
         joint_frame = joint_frame.to(self.device)
         bone_frame = self._compute_bone(joint_frame)
         jm_frame = self._compute_motion(joint_frame)
@@ -159,15 +159,34 @@ class CE_GCN_Pipeline:
             results = [f.result() for f in futures]
             
         with torch.no_grad():
-            softmax_logits = [torch.softmax(r, dim=-1) for r in results]
-            gate_input = torch.cat(softmax_logits, dim=-1)
-            alpha = self.fusion_gate(gate_input)
-            
-            softmax_stacked = torch.stack(softmax_logits, dim=0)
-            alpha_unsqueezed = alpha.t().unsqueeze(-1)
-            fused_predictions = (softmax_stacked * alpha_unsqueezed).sum(dim=0)
-            
-        self.last_weights = alpha
+            if mode == 'dynamic':
+                softmax_logits = [torch.softmax(r, dim=-1) for r in results]
+                gate_input = torch.cat(softmax_logits, dim=-1)
+                alpha = self.fusion_gate(gate_input)
+                
+                softmax_stacked = torch.stack(softmax_logits, dim=0)
+                alpha_unsqueezed = alpha.t().unsqueeze(-1)
+                fused_predictions = (softmax_stacked * alpha_unsqueezed).sum(dim=0)
+                self.last_weights = alpha
+            else:
+                # Chế độ tĩnh: Sử dụng trọng số alpha cố định và hệ số nhiệt độ (Temperature scaling)
+                if static_weights is None:
+                    static_weights = [0.347, 0.449, 0.061, 0.143]
+                if static_temperatures is None:
+                    static_temperatures = [1.0, 1.0, 1.0, 1.0]
+                
+                w = torch.tensor(static_weights, device=self.device, dtype=torch.float32)
+                w = w / (w.sum() + 1e-8)
+                
+                probs = []
+                for r, t in zip(results, static_temperatures):
+                    probs.append(torch.softmax(r / t, dim=-1))
+                    
+                softmax_stacked = torch.stack(probs, dim=0)
+                w_unsqueezed = w.view(4, 1, 1)
+                fused_predictions = (softmax_stacked * w_unsqueezed).sum(dim=0)
+                self.last_weights = w
+                
         pred_class = torch.argmax(fused_predictions, dim=1).item()
         confidence = torch.max(fused_predictions).item()
         

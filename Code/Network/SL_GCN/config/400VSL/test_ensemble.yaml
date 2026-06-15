@@ -1,0 +1,67 @@
+# Joint
+joint_model: model.hand_aware_sl_lgcn.Model
+joint_model_args:
+  num_class: 400
+  num_point: 27
+  num_person: 1
+  graph: graph.sign_27.Graph
+  A_hands: graph.sign_27_A_hands.Graph
+  graph_args:
+    labeling_mode: spatial
+joint_weights: null
+joint_feeder: feeders.feeder_cvpr.Feeder
+joint_test_feeder_args:
+  data_path: data/data/400VSL/processed/27_direct/test_data_joint.npy
+  label_path: data/data/400VSL/processed/27_direct/test_label.pkl
+  window_size: 150
+
+# Bone
+bone_model: model.hand_aware_sl_lgcn.Model
+bone_model_args:
+  num_class: 400
+  num_point: 27
+  num_person: 1
+  graph: graph.sign_27.Graph
+  A_hands: graph.sign_27_A_hands.Graph
+  graph_args:
+    labeling_mode: spatial
+bone_weights: null
+bone_feeder: feeders.feeder_cvpr.Feeder
+bone_test_feeder_args:
+  data_path: data/data/400VSL/processed/27_direct/test_data_bone.npy
+  label_path: data/data/400VSL/processed/27_direct/test_label.pkl
+  window_size: 150
+
+# Joint Motion
+joint_motion_model: model.hand_aware_sl_lgcn.Model
+joint_motion_model_args:
+  num_class: 400
+  num_point: 27
+  num_person: 1
+  graph: graph.sign_27.Graph
+  A_hands: graph.sign_27_A_hands.Graph
+  graph_args:
+    labeling_mode: spatial
+joint_motion_weights: null
+joint_motion_feeder: feeders.feeder_cvpr.Feeder
+joint_motion_test_feeder_args:
+  data_path: data/data/400VSL/processed/27_direct/test_data_joint_motion.npy
+  label_path: data/data/400VSL/processed/27_direct/test_label.pkl
+  window_size: 150
+
+# Bone Motion
+bone_motion_model: model.hand_aware_sl_lgcn.Model
+bone_motion_model_args:
+  num_class: 400
+  num_point: 27
+  num_person: 1
+  graph: graph.sign_27.Graph
+  A_hands: graph.sign_27_A_hands.Graph
+  graph_args:
+    labeling_mode: spatial
+bone_motion_weights: null
+bone_motion_feeder: feeders.feeder_cvpr.Feeder
+bone_motion_test_feeder_args:
+  data_path: data/data/400VSL/processed/27_direct/test_data_bone_motion.npy
+  label_path: data/data/400VSL/processed/27_direct/test_label.pkl
+  window_size: 150

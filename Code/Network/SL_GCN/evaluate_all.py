@@ -141,11 +141,21 @@ def main():
             p.__dict__[k] = v
             
     print("\n[1] Bắt đầu nạp các checkpoints chỉ định cấu hình sẵn...")
+    
+    def resolve_weight(cfg_weight, prefix, fallback_approved):
+        if cfg_weight and os.path.exists(cfg_weight):
+            return cfg_weight
+        found = find_best_checkpoint_robust("work_dir", prefix)
+        if found and os.path.exists(found):
+            print(f"  -> Tự động tìm thấy checkpoint tốt nhất cho {prefix}: {found}")
+            return found
+        return fallback_approved
+
     actual_weights = {
-        'Joint': APPROVED_CHECKPOINTS['joint'],
-        'Bone': APPROVED_CHECKPOINTS['bone'],
-        'Joint Motion': APPROVED_CHECKPOINTS['joint_motion'],
-        'Bone Motion': APPROVED_CHECKPOINTS['bone_motion']
+        'Joint': resolve_weight(getattr(p, 'joint_weights', None), 'Joint_best_acc', APPROVED_CHECKPOINTS['joint']),
+        'Bone': resolve_weight(getattr(p, 'bone_weights', None), 'Bone_best_acc', APPROVED_CHECKPOINTS['bone']),
+        'Joint Motion': resolve_weight(getattr(p, 'joint_motion_weights', None), 'Joint_Motion_best_acc', APPROVED_CHECKPOINTS['joint_motion']),
+        'Bone Motion': resolve_weight(getattr(p, 'bone_motion_weights', None), 'Bone_Motion_best_acc', APPROVED_CHECKPOINTS['bone_motion'])
     }
     
     for name, path in actual_weights.items():
@@ -161,7 +171,8 @@ def main():
         ('Bone Motion', p.bone_motion_model, p.bone_motion_feeder, actual_weights['Bone Motion'], p.bone_motion_test_feeder_args, p.bone_motion_model_args)
     ]
     
-    cache_path = 'work_dir/test_scores_cache.pkl'
+    num_classes_run = p.joint_model_args.get('num_class', 200)
+    cache_path = f'work_dir/test_scores_cache_{num_classes_run}.pkl'
     scores_dict = {}
     
     if os.path.exists(cache_path):
@@ -392,7 +403,17 @@ def main():
         print(f"    [!] Lỗi khi tối ưu hóa bằng Optuna: {e}")
         acc_optuna, acc5_optuna = None, None
         
-    fusion_gate_path = 'work_dir/fusion_gate_best.pt'
+    # Tìm kiếm checkpoint fusion gate phù hợp
+    fusion_gate_path = getattr(p, 'fusion_gate_weights', None) or 'work_dir/400VSL/fusion_gate_final.pt'
+    if not os.path.exists(fusion_gate_path):
+        # Thử tìm các file fusion_gate*.pt khác
+        found_fg = glob.glob(os.path.join("work_dir", "**", "*fusion_gate*.pt"), recursive=True)
+        if found_fg:
+            found_fg.sort(key=os.path.getmtime)
+            fusion_gate_path = found_fg[-1]
+        else:
+            fusion_gate_path = 'work_dir/fusion_gate_best.pt'
+            
     acc_adaptive, acc5_adaptive = None, None
     
     if os.path.exists(fusion_gate_path):
