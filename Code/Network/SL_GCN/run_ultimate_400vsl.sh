@@ -3,10 +3,8 @@
 # Tự động dừng script nếu có bước nào bị lỗi
 set -e
 
-# Lấy ngày tháng năm và giờ phút giây để tạo thư mục lưu log riêng biệt
-LOG_DATE=$(date +%d-%m-%Y_%H-%M-%S)
-echo "LOGS WILL BE SAVED TO: log/${LOG_DATE}"
-mkdir -p log/${LOG_DATE}
+echo "LOGS WILL BE SAVED TO: log/15-06-2026"
+mkdir -p log/15-06-2026
 
 # Cấu hình đường dẫn dữ liệu
 VIDEO_DIR="data/data/400VSL/400VSLcropped"
@@ -38,28 +36,28 @@ PROCESSED_DIR="data/data/400VSL/processed/27_direct"
 # 3.1 Luồng Joint
 echo "[3.1/4] Training JOINT stream..."
 python -u main_base.py \
-  --config config/400VSL/train_joint.yaml > log/21-05-2026/${LOG_DATE}/train_joint.log 2>&1
+  --config config/400VSL/train_joint.yaml > log/15-06-2026/train_joint.log 2>&1
 
 # 3.2 Luồng Bone (Sử dụng Clone & Evolve từ Joint để nhanh hơn)
 echo "[3.2/4] Training BONE stream..."
 python -u main_base.py \
   --config config/400VSL/train_bone.yaml \
   --clone_auto True \
-  --evolve_mode True  > log/21-05-2026/${LOG_DATE}/train_bone.log 2>&1
+  --evolve_mode True  > log/15-06-2026/train_bone.log 2>&1
 
 # 3.3 Luồng Joint Motion
 echo "[3.3/4] Training JOINT MOTION stream..."
 python -u main_base.py \
   --config config/400VSL/train_joint_motion.yaml \
   --clone_auto True \
-  --evolve_mode True > log/21-05-2026/${LOG_DATE}/train_joint_motion.log 2>&1
+  --evolve_mode True > log/15-06-2026/train_joint_motion.log 2>&1
 
 # 3.4 Luồng Bone Motion
 echo "[3.4/4] Training BONE MOTION stream..."
 python -u main_base.py \
   --config config/400VSL/train_bone_motion.yaml \
   --clone_auto True \
-  --evolve_mode True > log/21-05-2026/${LOG_DATE}/train_bone_motion.log 2>&1
+  --evolve_mode True > log/15-06-2026/train_bone_motion.log 2>&1
 
 # BƯỚC 4: ADAPTIVE FUSION (KẾT HỢP KẾT QUẢ VÀ HUẤN LUYỆN GATING NETWORK)
 echo "=========================================================="
