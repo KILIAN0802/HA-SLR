@@ -146,6 +146,14 @@ class Processor():
                 self.print_log('WandB login failed: {}'.format(exc))
                 return
 
+        # Tự động tạo wandb_id độc nhất dựa trên work_dir để tránh các tiến trình chạy song song ghi đè lên nhau
+        # khi dùng resume='auto' mà không có id riêng biệt.
+        run_id = self.args.wandb_id
+        if not run_id:
+            import hashlib
+            work_dir_abs = os.path.abspath(self.args.work_dir)
+            run_id = hashlib.md5(work_dir_abs.encode('utf-8')).hexdigest()
+
         wandb_kwargs = {
             'project': self.args.wandb_project or self.args.Experiment_name.split('/')[0],
             'name': self.args.wandb_run_name or os.path.basename(self.args.work_dir),
@@ -153,16 +161,15 @@ class Processor():
             'tags': self.args.wandb_tags or None,
             'mode': os.environ.get('WANDB_MODE') or self.args.wandb_mode,
             'resume': self.args.wandb_resume,
+            'id': run_id,
         }
         if self.args.wandb_entity:
             wandb_kwargs['entity'] = self.args.wandb_entity
-        if self.args.wandb_id:
-            wandb_kwargs['id'] = self.args.wandb_id
 
         self.wandb_run = wandb.init(**wandb_kwargs)
         self._wandb_enabled = True
         wandb.config.update(vars(self.args), allow_val_change=True)
-        self.print_log('WandB initialized: {}'.format(self.wandb_run.name))
+        self.print_log('WandB initialized: {} (ID: {})'.format(self.wandb_run.name, run_id))
 
     def log_wandb(self, data, step=None):
         if self._wandb_enabled and self.wandb_run is not None:
