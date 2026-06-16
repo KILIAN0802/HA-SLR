@@ -30,45 +30,42 @@ PROCESSED_DIR="data/data/400VSL/processed/27_direct"
 # echo ">>> BƯỚC 2: Tổ chức dữ liệu và tạo các luồng Bone, Motion..."
 # python prepare_400vsl_pipeline.py
 
-# BƯỚC 3: HUẤN LUYỆN TIẾP CÁC LUỒNG (FOUR STREAMS - AUTO RESUME, CLONE DISABLED)
+# BƯỚC 3: HUẤN LUYỆN TIẾP CÁC LUỒNG TUẦN TỰ (FOUR STREAMS - AUTO RESUME, CLONE DISABLED)
+# Chạy tuần tự giúp tránh lỗi CUDA Out of Memory trên GPU dùng chung
 echo "=========================================================="
-echo ">>> BƯỚC 3: Huấn luyện tiếp tục các luồng đặc trưng (Clone OFF)..."
+echo ">>> BƯỚC 3: Huấn luyện tiếp tục các luồng đặc trưng (Tuần tự)..."
 echo "=========================================================="
 
 # 3.1 Luồng Joint
 echo "[3.1/4] Training JOINT stream..."
-nohup python -u main_base.py \
+python -u main_base.py \
   --config config/400VSL/train_joint.yaml \
   --auto-resume True \
-  --clone_auto False > log/${LOG_DATE}/train_joint.log 2>&1 &
+  --clone_auto False > log/${LOG_DATE}/train_joint.log 2>&1
 
 # 3.2 Luồng Bone (Sử dụng Evolve nhưng tắt Clone)
 echo "[3.2/4] Training BONE stream..."
-nohup python -u main_base.py \
+python -u main_base.py \
   --config config/400VSL/train_bone.yaml \
   --auto-resume True \
   --clone_auto False \
-  --evolve_mode True > log/${LOG_DATE}/train_bone.log 2>&1 &
+  --evolve_mode True > log/${LOG_DATE}/train_bone.log 2>&1
 
 # 3.3 Luồng Joint Motion
 echo "[3.3/4] Training JOINT MOTION stream..."
-nohup python -u main_base.py \
+python -u main_base.py \
   --config config/400VSL/train_joint_motion.yaml \
   --auto-resume True \
   --clone_auto False \
-  --evolve_mode True > log/${LOG_DATE}/train_joint_motion.log 2>&1 &
+  --evolve_mode True > log/${LOG_DATE}/train_joint_motion.log 2>&1
 
 # 3.4 Luồng Bone Motion
 echo "[3.4/4] Training BONE MOTION stream..."
-nohup python -u main_base.py \
+python -u main_base.py \
   --config config/400VSL/train_bone_motion.yaml \
   --auto-resume True \
   --clone_auto False \
-  --evolve_mode True > log/${LOG_DATE}/train_bone_motion.log 2>&1 &
-
-# Đợi tất cả các tiến trình huấn luyện các luồng kết thúc
-echo "Waiting for all GCN training streams to complete..."
-wait
+  --evolve_mode True > log/${LOG_DATE}/train_bone_motion.log 2>&1
 
 # BƯỚC 4: ADAPTIVE FUSION (KẾT HỢP KẾT QUẢ VÀ HUẤN LUYỆN GATING NETWORK)
 echo "=========================================================="
@@ -86,8 +83,8 @@ JM_CKPT=$(find_best "work_dir/400VSL-no_clone/Joint_Motion")
 BM_CKPT=$(find_best "work_dir/400VSL-no_clone/Bone_Motion")
 
 if [ -n "$JOINT_CKPT" ]; then
-    echo "Starting Adaptive Fusion Gate training with nohup..."
-    nohup python -u train_fusion_gate.py \
+    echo "Starting Adaptive Fusion Gate training..."
+    python -u train_fusion_gate.py \
       --data_path "$PROCESSED_DIR/val_data_joint.npy" \
       --label_path "$PROCESSED_DIR/val_label.pkl" \
       --w_joint "$JOINT_CKPT" \
@@ -95,11 +92,7 @@ if [ -n "$JOINT_CKPT" ]; then
       --w_jm "$JM_CKPT" \
       --w_bm "$BM_CKPT" \
       --save_path "work_dir/400VSL-no_clone/fusion_gate_final.pt" \
-      --epochs 50 > log/${LOG_DATE}/train_fusion.log 2>&1 &
-      
-    # Đợi quá trình huấn luyện Fusion Gate kết thúc
-    echo "Waiting for Fusion Gate training to complete..."
-    wait
+      --epochs 50 > log/${LOG_DATE}/train_fusion.log 2>&1
 else
     echo "LỖI: Không tìm thấy checkpoint để thực hiện Fusion!"
 fi
@@ -108,11 +101,8 @@ fi
 echo "=========================================================="
 echo ">>> BƯỚC 5: Chạy đánh giá đa luồng (Static & Dynamic)..."
 echo "=========================================================="
-nohup python -u evaluate_all.py \
-  --config config/400VSL/test_ensemble.yaml > log/${LOG_DATE}/evaluation.log 2>&1 &
-
-echo "Waiting for evaluation to complete..."
-wait
+python -u evaluate_all.py \
+  --config config/400VSL/test_ensemble.yaml > log/${LOG_DATE}/evaluation.log 2>&1
 
 echo "=========================================================="
 echo "PIPELINE HOÀN TẤT THÀNH CÔNG!"
