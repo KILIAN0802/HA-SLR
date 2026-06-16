@@ -4,7 +4,7 @@
 set -e
 
 # Chỉ định GPU chạy (Ví dụ: 0, 1, 2...). Nếu GPU 0 bị đầy, hãy đổi thành số GPU trống khác.
-export CUDA_VISIBLE_DEVICES=0
+export CUDA_VISIBLE_DEVICES=1
 
 # Lấy ngày tháng năm và giờ phút giây để tạo thư mục lưu log riêng biệt
 LOG_DATE=$(date +%d-%m-%Y)
