@@ -404,13 +404,21 @@ def main():
         acc_optuna, acc5_optuna = None, None
         
     # Tìm kiếm checkpoint fusion gate phù hợp
-    fusion_gate_path = getattr(p, 'fusion_gate_weights', None) or 'work_dir/400VSL/fusion_gate_final.pt'
+    fusion_gate_path = getattr(p, 'fusion_gate_weights', None) or 'work_dir/400VSL-no_clone/fusion_gate_final.pt'
+    if not os.path.exists(fusion_gate_path):
+        fusion_gate_path = 'work_dir/400VSL/fusion_gate_final.pt'
     if not os.path.exists(fusion_gate_path):
         # Thử tìm các file fusion_gate*.pt khác
         found_fg = glob.glob(os.path.join("work_dir", "**", "*fusion_gate*.pt"), recursive=True)
         if found_fg:
-            found_fg.sort(key=os.path.getmtime)
-            fusion_gate_path = found_fg[-1]
+            # Ưu tiên các file chứa cụm từ phù hợp với thư mục huấn luyện hiện tại
+            no_clone_fgs = [f for f in found_fg if 'no_clone' in f.replace('\\', '/')]
+            if no_clone_fgs:
+                no_clone_fgs.sort(key=os.path.getmtime)
+                fusion_gate_path = no_clone_fgs[-1]
+            else:
+                found_fg.sort(key=os.path.getmtime)
+                fusion_gate_path = found_fg[-1]
         else:
             fusion_gate_path = 'work_dir/fusion_gate_best.pt'
             
@@ -419,38 +427,49 @@ def main():
     if os.path.exists(fusion_gate_path):
         print(f"\n[6] Đang tải mạng Adaptive Fusion Gate từ: {fusion_gate_path}...")
         num_classes = p.joint_model_args.get('num_class', 200)
-        fusion_gate = AdaptiveFusionGate(num_classes=num_classes).cuda()
         
+        # Đọc trước file checkpoint để lấy shape thực tế từ checkpoint tránh lỗi mismatch num_classes
         ckpt = torch.load(fusion_gate_path)
         state_dict = ckpt['model_state_dict'] if isinstance(ckpt, dict) and 'model_state_dict' in ckpt else ckpt
-        fusion_gate.load_state_dict(state_dict)
-        fusion_gate.eval()
         
-        s_joint = torch.softmax(torch.tensor(scores_dict['Joint']).cuda(), dim=-1)
-        s_bone  = torch.softmax(torch.tensor(scores_dict['Bone']).cuda(), dim=-1)
-        s_jm    = torch.softmax(torch.tensor(scores_dict['Joint Motion']).cuda(), dim=-1)
-        s_bm    = torch.softmax(torch.tensor(scores_dict['Bone Motion']).cuda(), dim=-1)
+        checkpoint_input_features = state_dict['gate_network.0.weight'].shape[1]
+        classes_in_checkpoint = checkpoint_input_features // 4
         
-        gate_input = torch.cat([s_joint, s_bone, s_jm, s_bm], dim=-1)
-        
-        with torch.no_grad():
-            alpha_dynamic = fusion_gate(gate_input)
-            softmax_stacked = torch.stack([s_joint, s_bone, s_jm, s_bm], dim=0)
-            alpha_unsqueezed = alpha_dynamic.t().unsqueeze(-1)
-            fused_probs_adaptive = (softmax_stacked * alpha_unsqueezed).sum(dim=0).cpu().numpy()
+        if classes_in_checkpoint != num_classes:
+            print(f"  [!] Cảnh báo: Số lớp trong checkpoint Fusion Gate ({classes_in_checkpoint}) khác với số lớp hiện tại ({num_classes}).")
+            print(f"      (Không thể chạy suy luận động vì kích thước đặc trưng không khớp: {checkpoint_input_features} vs {4 * num_classes})")
+            print("      -> Bỏ qua đánh giá phần Adaptive Fusion Gate (Động). Vui lòng huấn luyện lại Fusion Gate tương ứng với 400 lớp.")
+            acc_adaptive, acc5_adaptive = None, None
+        else:
+            fusion_gate = AdaptiveFusionGate(num_classes=num_classes).cuda()
+            fusion_gate.load_state_dict(state_dict)
+            fusion_gate.eval()
             
-        preds_adaptive = np.argmax(fused_probs_adaptive, axis=1)
-        acc_adaptive = np.mean(preds_adaptive == label) * 100
-        correct_top5_adaptive = sum(1 for i in range(len(label)) if label[i] in fused_probs_adaptive[i].argsort()[-5:])
-        acc5_adaptive = (correct_top5_adaptive / len(label)) * 100
-        
-        print(f"  * Adaptive Fusion Gate Top-1 Acc: {acc_adaptive:.2f}%")
-        print(f"  * Adaptive Fusion Gate Top-5 Acc: {acc5_adaptive:.2f}%")
-        
-        out_csv = 'predictions_adaptive_fusion.csv'
-        with open(out_csv, 'w') as f:
-            for name_idx, pred in zip(names, preds_adaptive):
-                f.write('{}, {}\n'.format(name_idx, pred))
+            s_joint = torch.softmax(torch.tensor(scores_dict['Joint']).cuda(), dim=-1)
+            s_bone  = torch.softmax(torch.tensor(scores_dict['Bone']).cuda(), dim=-1)
+            s_jm    = torch.softmax(torch.tensor(scores_dict['Joint Motion']).cuda(), dim=-1)
+            s_bm    = torch.softmax(torch.tensor(scores_dict['Bone Motion']).cuda(), dim=-1)
+            
+            gate_input = torch.cat([s_joint, s_bone, s_jm, s_bm], dim=-1)
+            
+            with torch.no_grad():
+                alpha_dynamic = fusion_gate(gate_input)
+                softmax_stacked = torch.stack([s_joint, s_bone, s_jm, s_bm], dim=0)
+                alpha_unsqueezed = alpha_dynamic.t().unsqueeze(-1)
+                fused_probs_adaptive = (softmax_stacked * alpha_unsqueezed).sum(dim=0).cpu().numpy()
+                
+            preds_adaptive = np.argmax(fused_probs_adaptive, axis=1)
+            acc_adaptive = np.mean(preds_adaptive == label) * 100
+            correct_top5_adaptive = sum(1 for i in range(len(label)) if label[i] in fused_probs_adaptive[i].argsort()[-5:])
+            acc5_adaptive = (correct_top5_adaptive / len(label)) * 100
+            
+            print(f"  * Adaptive Fusion Gate Top-1 Acc: {acc_adaptive:.2f}%")
+            print(f"  * Adaptive Fusion Gate Top-5 Acc: {acc5_adaptive:.2f}%")
+            
+            out_csv = 'predictions_adaptive_fusion.csv'
+            with open(out_csv, 'w') as f:
+                for name_idx, pred in zip(names, preds_adaptive):
+                    f.write('{}, {}\n'.format(name_idx, pred))
     
     # 6. Logic so sánh động để gắn nhãn BEST PERFORMANCE
     print("\n" + "="*60)
