@@ -1,0 +1,31 @@
+{
+  "os":  "Linux-6.14.0-33-generic-x86_64-with-glibc2.39",
+  "python":  "CPython 3.10.20",
+  "startedAt":  "2026-05-11T23:42:55.341910Z",
+  "args":  [
+    "--config",
+    "config/MultiVSL200/train_joint.yaml",
+    "--use-wandb",
+    "True",
+    "--wandb-project",
+    "HA-SLR-GCN",
+    "--wandb-run-name",
+    "Joint_Stream_Run1",
+    "--es",
+    "True",
+    "--es_patience",
+    "20"
+  ],
+  "program":  "/mnt/nvme2/users/utbt_sv1/HASLR/HA-SLR/Code/Network/SL_GCN/main_base.py",
+  "codePath":  "Code/Network/SL_GCN/main_base.py",
+  "codePathLocal":  "main_base.py",
+  "git":  {
+    "remote":  "https://github.com/KILIAN0802/HA-SLR.git",
+    "commit":  "2c20c3eb3b049f2c1cafe3353a2f2cfe30247520"
+  },
+  "email":  "ibme.lab@gmail.com",
+  "root":  "/mnt/nvme2/users/utbt_sv1/HASLR/HA-SLR/Code/Network/SL_GCN",
+  "host":  "sigm-UTBT",
+  "executable":  "/mnt/nvme0/home/utbt_sv1/miniconda3/envs/haslr_env/bin/python",
+  "writerId":  "vuxyyes1scwolc33w8hfnmvb9gwb8o2t"
+}
