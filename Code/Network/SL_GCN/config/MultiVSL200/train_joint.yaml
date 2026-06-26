@@ -12,7 +12,6 @@ train_feeder_args:
   label_path: data/data/MultiVSL200/processed/27_direct/train_label.pkl
   window_size: 150
   debug: False
-  use_jdma: False
 val_feeder_args:
   data_path: data/data/MultiVSL200/processed/27_direct/val_data_joint.npy
   label_path: data/data/MultiVSL200/processed/27_direct/val_label.pkl

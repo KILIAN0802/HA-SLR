@@ -1,67 +1,60 @@
-# Joint
-joint_model: model.hand_aware_sl_lgcn.Model
-joint_model_args:
-  num_class: 200
-  num_point: 27
-  num_person: 1
-  graph: graph.sign_27.Graph
-  A_hands: graph.sign_27_A_hands.Graph
-  graph_args:
-    labeling_mode: spatial
-joint_weights: work_dir/MultiVSL200-hace/Joint/bs32_f150_lr0.1_warmup0/2026-05-19_20-53-05/checkpoints/Joint_best_acc_116_6543.pt
-joint_feeder: feeders.feeder_cvpr.Feeder
-joint_test_feeder_args:
-  data_path: data/data/MultiVSL200/processed/27_direct/test_data_joint.npy
-  label_path: data/data/MultiVSL200/processed/27_direct/test_label.pkl
-  window_size: 150
-
-# Bone
+bone_feeder: feeders.feeder_cvpr.Feeder
 bone_model: model.hand_aware_sl_lgcn.Model
 bone_model_args:
-  num_class: 200
-  num_point: 27
-  num_person: 1
-  graph: graph.sign_27.Graph
   A_hands: graph.sign_27_A_hands.Graph
+  graph: graph.sign_27.Graph
   graph_args:
     labeling_mode: spatial
-bone_weights: work_dir/MultiVSL200-hace/Bone/bs32_f150_lr0.1_warmup0/2026-05-19_22-24-43/checkpoints/Bone_best_acc_44_6419.pt
-bone_feeder: feeders.feeder_cvpr.Feeder
-bone_test_feeder_args:
-  data_path: data/data/MultiVSL200/processed/27_direct/test_data_bone.npy
-  label_path: data/data/MultiVSL200/processed/27_direct/test_label.pkl
-  window_size: 150
-
-# Joint Motion
-joint_motion_model: model.hand_aware_sl_lgcn.Model
-joint_motion_model_args:
   num_class: 200
-  num_point: 27
   num_person: 1
-  graph: graph.sign_27.Graph
-  A_hands: graph.sign_27_A_hands.Graph
-  graph_args:
-    labeling_mode: spatial
-joint_motion_weights: work_dir/MultiVSL200-hace/Joint_Motion/bs32_f150_lr0.1_warmup0/2026-05-19_22-45-31/checkpoints/Joint_Motion_best_acc_30_2489.pt
-joint_motion_feeder: feeders.feeder_cvpr.Feeder
-joint_motion_test_feeder_args:
-  data_path: data/data/MultiVSL200/processed/27_direct/test_data_joint_motion.npy
-  label_path: data/data/MultiVSL200/processed/27_direct/test_label.pkl
-  window_size: 150
-
-# Bone Motion
+  num_point: 27
+bone_motion_feeder: feeders.feeder_cvpr.Feeder
 bone_motion_model: model.hand_aware_sl_lgcn.Model
 bone_motion_model_args:
-  num_class: 200
-  num_point: 27
-  num_person: 1
-  graph: graph.sign_27.Graph
   A_hands: graph.sign_27_A_hands.Graph
+  graph: graph.sign_27.Graph
   graph_args:
     labeling_mode: spatial
-bone_motion_weights: work_dir/MultiVSL200-hace/Bone_Motion/bs32_f150_lr0.1_warmup0/2026-05-19_23-06-18/checkpoints/Bone_Motion_best_acc_41_5226.pt
-bone_motion_feeder: feeders.feeder_cvpr.Feeder
+  num_class: 200
+  num_person: 1
+  num_point: 27
 bone_motion_test_feeder_args:
   data_path: data/data/MultiVSL200/processed/27_direct/test_data_bone_motion.npy
   label_path: data/data/MultiVSL200/processed/27_direct/test_label.pkl
   window_size: 150
+bone_motion_weights: work_dir/MultiVSL200/Bone_Motion/bs32_f150_lr0.1_warmup0/2026-06-26_04-07-29/checkpoints/Bone_Motion_best_acc_189_5987.pt
+bone_test_feeder_args:
+  data_path: data/data/MultiVSL200/processed/27_direct/test_data_bone.npy
+  label_path: data/data/MultiVSL200/processed/27_direct/test_label.pkl
+  window_size: 150
+bone_weights: work_dir/MultiVSL200/Bone/bs32_f150_lr0.1_warmup0/2026-06-26_01-03-08/checkpoints/Bone_best_acc_132_7181.pt
+joint_feeder: feeders.feeder_cvpr.Feeder
+joint_model: model.hand_aware_sl_lgcn.Model
+joint_model_args:
+  A_hands: graph.sign_27_A_hands.Graph
+  graph: graph.sign_27.Graph
+  graph_args:
+    labeling_mode: spatial
+  num_class: 200
+  num_person: 1
+  num_point: 27
+joint_motion_feeder: feeders.feeder_cvpr.Feeder
+joint_motion_model: model.hand_aware_sl_lgcn.Model
+joint_motion_model_args:
+  A_hands: graph.sign_27_A_hands.Graph
+  graph: graph.sign_27.Graph
+  graph_args:
+    labeling_mode: spatial
+  num_class: 200
+  num_person: 1
+  num_point: 27
+joint_motion_test_feeder_args:
+  data_path: data/data/MultiVSL200/processed/27_direct/test_data_joint_motion.npy
+  label_path: data/data/MultiVSL200/processed/27_direct/test_label.pkl
+  window_size: 150
+joint_motion_weights: work_dir/MultiVSL200/Joint_Motion/bs32_f150_lr0.1_warmup0/2026-06-26_02-35-21/checkpoints/Joint_Motion_best_acc_148_5534.pt
+joint_test_feeder_args:
+  data_path: data/data/MultiVSL200/processed/27_direct/test_data_joint.npy
+  label_path: data/data/MultiVSL200/processed/27_direct/test_label.pkl
+  window_size: 150
+joint_weights: work_dir/MultiVSL200/Joint/bs32_f150_lr0.1_warmup0/2026-06-25_23-31-04/checkpoints/Joint_best_acc_193_6481.pt

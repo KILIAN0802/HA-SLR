@@ -30,16 +30,16 @@ echo "==========================================================================
 # ------------------------------------------------------------------------------
 
 echo -e "\n>>> [1/5] Đang huấn luyện luồng Joint (Khớp)..."
-$PYTHON_BIN main_base.py --config config/MultiVSL200/train_joint.yaml
+$PYTHON_BIN main_base.py --config config/MultiVSL200/train_joint.yaml --use-wandb True --wandb-project HA-SLR-GCN --wandb-run-name "MultiVSL200-Joint-Baseline"
 
 echo -e "\n>>> [2/5] Đang huấn luyện luồng Bone (Xương)..."
-$PYTHON_BIN main_base.py --config config/MultiVSL200/train_bone.yaml
+$PYTHON_BIN main_base.py --config config/MultiVSL200/train_bone.yaml --use-wandb True --wandb-project HA-SLR-GCN --wandb-run-name "MultiVSL200-Bone-Baseline"
 
 echo -e "\n>>> [3/5] Đang huấn luyện luồng Joint Motion (Chuyển động Khớp)..."
-$PYTHON_BIN main_base.py --config config/MultiVSL200/train_joint_motion.yaml
+$PYTHON_BIN main_base.py --config config/MultiVSL200/train_joint_motion.yaml --use-wandb True --wandb-project HA-SLR-GCN --wandb-run-name "MultiVSL200-Joint_Motion-Baseline"
 
 echo -e "\n>>> [4/5] Đang huấn luyện luồng Bone Motion (Chuyển động Xương)..."
-$PYTHON_BIN main_base.py --config config/MultiVSL200/train_bone_motion.yaml
+$PYTHON_BIN main_base.py --config config/MultiVSL200/train_bone_motion.yaml --use-wandb True --wandb-project HA-SLR-GCN --wandb-run-name "MultiVSL200-Bone_Motion-Baseline"
 
 # ------------------------------------------------------------------------------
 # BƯỚC 2: CẬP NHẬT CẤU HÌNH ENSEMBLE VỚI CHECKPOINT MỚI NHẤT

@@ -137,3 +137,4 @@ node_modules/
 .venv/
 Code/Network/SL_GCN/work_dir/
 Code/Network/SL_GCN/data/
+Code/Network/SL_GCN/wandb/
