@@ -15,65 +15,6 @@ from parser import get_parser
 from model.utils import import_class
 from online_inference_pipeline import AdaptiveFusionGate
 
-APPROVED_CHECKPOINTS = {
-    'joint': 'work_dir/MultiVSL200/Joint/bs32_f150_lr0.1_warmup0/2026-05-20_17-16-03/checkpoints/Joint_best_acc_62_6831.pt', 
-    'bone': 'work_dir/MultiVSL200/Bone/bs32_f150_lr0.1_warmup0/2026-05-20_19-38-53/checkpoints/Bone_best_acc_43_6296.pt',
-    'joint_motion': 'work_dir/MultiVSL200/Joint_Motion/bs32_f150_lr0.1_warmup0/2026-05-20_20-22-42/checkpoints/Joint_Motion_best_acc_40_3251.pt',
-    'bone_motion': 'work_dir/MultiVSL200/Bone_Motion/bs32_f150_lr0.1_warmup0/2026-05-20_21-06-32/checkpoints/Bone_Motion_best_acc_42_5452.pt',
-    'fusion_gate': 'work_dir/fusion_gate_best.pt'
-}
-def find_best_checkpoint_robust(base_dir, prefix):
-    """
-    Quét toàn bộ thư mục base_dir (bao gồm cả các thư mục con) để tìm checkpoint
-    có tiền tố 'prefix' và trích xuất chỉ số Accuracy thực tế lớn nhất từ tên file.
-    """
-    pattern = os.path.join(base_dir, "**", f"*{prefix}*.pt")
-    files = glob.glob(pattern, recursive=True)
-    
-    # Bộ lọc loại trừ chéo để tránh nhận nhầm luồng Motion
-    filtered_files = []
-    for f in files:
-        norm_f = f.replace('\\', '/')
-        if prefix == 'Joint_best_acc' and 'Joint_Motion' in norm_f:
-            continue
-        if prefix == 'Bone_best_acc' and 'Bone_Motion' in norm_f:
-            continue
-        filtered_files.append(f)
-        
-    if not filtered_files:
-        return None
-        
-    best_file = None
-    best_acc = -1.0
-    
-    # Thuật toán trích xuất số thực Acc từ chuỗi tên file: vd '*_acc_43_6296.pt' -> 0.6296
-    for f in filtered_files:
-        filename = os.path.basename(f)
-        if '_acc_' in filename:
-            try:
-                name_without_ext = filename[:-3] if filename.endswith('.pt') else filename
-                parts = name_without_ext.split('_acc_')
-                if len(parts) > 1:
-                    suffix = parts[1]
-                    sub_parts = suffix.split('_')
-                    if len(sub_parts) > 1:
-                        acc_str = sub_parts[-1]
-                        acc_val = float(f"0.{acc_str}")
-                    else:
-                        acc_val = float(f"0.{suffix}")
-                    
-                    if acc_val > best_acc:
-                        best_acc = acc_val
-                        best_file = f
-            except Exception:
-                pass
-                
-    if best_file is None:
-        filtered_files.sort(key=os.path.getmtime)
-        best_file = filtered_files[-1]
-        
-    return best_file
-
 def get_scores(model_name, feeder_name, weights_path, feeder_args, model_args, batch_size=32, num_workers=2):
     import gc
     Model = import_class(model_name)
@@ -142,10 +83,10 @@ def main():
             
     print("\n[1] Bắt đầu quét tự động tìm các checkpoints tốt nhất gần đây...")
     actual_weights = {
-        'Joint': find_best_checkpoint_robust("work_dir/MultiVSL200/Joint", "Joint_best_acc"),
-        'Bone': find_best_checkpoint_robust("work_dir/MultiVSL200/Bone", "Bone_best_acc"),
-        'Joint Motion': find_best_checkpoint_robust("work_dir/MultiVSL200/Joint_Motion", "Joint_Motion_best_acc"),
-        'Bone Motion': find_best_checkpoint_robust("work_dir/MultiVSL200/Bone_Motion", "Bone_Motion_best_acc")
+        'Joint': 'work_dir/MultiVSL200/Joint/bs32_f150_lr0.1_warmup0/2026-06-25_23-31-04/checkpoints/Joint_best_acc_193_6481.pt',
+        'Bone': 'work_dir/MultiVSL200/Bone/bs32_f150_lr0.1_warmup0/2026-06-26_01-03-08/checkpoints/Bone_best_acc_132_7181.pt',
+        'Joint Motion': 'work_dir/MultiVSL200/Joint_Motion/bs32_f150_lr0.1_warmup0/2026-06-26_02-35-21/checkpoints/Joint_Motion_best_acc_148_5534.pt',
+        'Bone Motion': 'work_dir/MultiVSL200/Bone_Motion/bs32_f150_lr0.1_warmup0/2026-06-26_04-07-29/checkpoints/Bone_Motion_best_acc_189_5987.pt'
     }
     
     for name, path in actual_weights.items():
@@ -161,7 +102,7 @@ def main():
         ('Bone Motion', p.bone_motion_model, p.bone_motion_feeder, actual_weights['Bone Motion'], p.bone_motion_test_feeder_args, p.bone_motion_model_args)
     ]
     
-    cache_path = 'work_dir/test_scores_cache.pkl'
+    cache_path = 'work_dir/test_scores_cache_pipeline.pkl'
     scores_dict = {}
     
     if os.path.exists(cache_path):
@@ -392,7 +333,7 @@ def main():
         print(f"    [!] Lỗi khi tối ưu hóa bằng Optuna: {e}")
         acc_optuna, acc5_optuna = None, None
         
-    fusion_gate_path = 'work_dir/fusion_gate_best.pt'
+    fusion_gate_path = 'work_dir/fusion_gate_train_pipeline.pt'
     acc_adaptive, acc5_adaptive = None, None
     
     if os.path.exists(fusion_gate_path):
@@ -426,7 +367,7 @@ def main():
         print(f"  * Adaptive Fusion Gate Top-1 Acc: {acc_adaptive:.2f}%")
         print(f"  * Adaptive Fusion Gate Top-5 Acc: {acc5_adaptive:.2f}%")
         
-        out_csv = 'predictions_adaptive_fusion.csv'
+        out_csv = 'predictions_adaptive_fusion_pipeline.csv'
         with open(out_csv, 'w') as f:
             for name_idx, pred in zip(names, preds_adaptive):
                 f.write('{}, {}\n'.format(name_idx, pred))
